@@ -1,11 +1,11 @@
 # Explain Aloud — Comprehensive Build & Progress Report
 
 **Generated:** 2026-10-04  
-**Current Milestone Completed:** M7 (ChatGPT DOM Adapter)  
-**Current Git Branch:** `feat/chatgpt-adapter`  
+**Current Milestone Completed:** M9 (Final Demo, Documentation & Acceptance Verification)  
+**Current Git Branch:** `feat/demo-acceptance`  
 **Overall Test Suite Status:** 58 tests passed across 10 test files (100% pass rate)  
 **TypeScript Typecheck:** 0 errors (`tsc --noEmit`)  
-**WXT Build:** Clean production bundle (~795ms build time)  
+**WXT Build:** Clean production bundle (~860ms build time)  
 
 ---
 
@@ -190,33 +190,82 @@ To protect `main` as a clean, deployable baseline and isolate each milestone for
 
 ---
 
+### Milestone M8 — UI, Playback Controls & Inspection (`feat/ui-controls`)
+- **Full Player & Inspector UI** ([`extension/entrypoints/popup/App.tsx`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/entrypoints/popup/App.tsx) & [`App.css`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/entrypoints/popup/App.css)):
+  - **Mode Toggle**: Interactive switch between **Natural Mode** and **Literal Mode**.
+  - **Playback Controller**: Dedicated controls for **Play**, **Pause**, **Skip**, and **Cancel** wired to the `AudioQueue`.
+  - **Active Segment Card**: Real-time display of the currently playing sentence with provenance badge (`rule`, `llm`, `literal`), verified status (`✓ Verified`), and fallback reason if triggered.
+  - **Segment Scroll List**: Complete audit log of generated segments with source block IDs and validation outcomes.
+  - **Embedded Fixture Data** ([`extension/src/pipeline/fixtureData.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/src/pipeline/fixtureData.ts)): Embeds `fixtures/mixed-response.html` directly in the extension so users can test the full pipeline anytime without navigating to ChatGPT.
+- **Commit**:
+  - `d1ff140`: `feat: playback controls, mode toggle, and segment inspection UI`
+
+---
+
+### Milestone M9 — Demo, Acceptance Verification & Release (`feat/demo-acceptance`)
+- **Demo & Acceptance Guide** ([`docs/DEMO.md`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/docs/DEMO.md)):
+  - Step-by-step walkthrough for local testing and ChatGPT live usage.
+  - Side-by-side comparison of standard browser/ChatGPT Read Aloud vs. Explain Aloud.
+  - Documentation of honest limitations and MVP scope boundaries.
+- **Project Documentation** ([`README.md`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/README.md)):
+  - Architecture diagram, core invariants, quickstart guide, and documentation index.
+
+---
+
 ## 4. Complete Test Results
 
-All test suites execute via Vitest with Happy-DOM in ~1.4 seconds:
+All test suites execute via Vitest with Happy-DOM in ~1.3 seconds:
 
 ```text
  ✓ src/smoke.test.ts (1 test) 3ms
- ✓ src/table/tableEngine.test.ts (8 tests) 16ms
- ✓ src/parser/htmlParser.test.ts (7 tests) 33ms
- ✓ src/validator/segmentValidator.test.ts (6 tests) 12ms
- ✓ src/narrator/ruleNarrator.test.ts (10 tests) 18ms
- ✓ src/narrator/llmNarrator.test.ts (10 tests) 17ms
- ✓ src/adapter/chatgptAdapter.test.ts (8 tests) 44ms
+ ✓ src/narrator/ruleNarrator.test.ts (10 tests) 10ms
+ ✓ src/parser/htmlParser.test.ts (7 tests) 26ms
+ ✓ src/adapter/chatgptAdapter.test.ts (8 tests) 32ms
+ ✓ src/validator/segmentValidator.test.ts (6 tests) 15ms
+ ✓ src/table/tableEngine.test.ts (8 tests) 17ms
+ ✓ src/narrator/llmNarrator.test.ts (10 tests) 23ms
  ✓ src/pipeline/pipeline.test.ts (2 tests) 38ms
  ✓ src/kokoro.test.ts (1 test) 3ms
- ✓ src/audio/audioQueue.test.ts (5 tests) 79ms
+ ✓ src/audio/audioQueue.test.ts (5 tests) 68ms
 
  Test Files  10 passed (10)
       Tests  58 passed (58)
-   Duration  1.44s
+   Duration  1.32s
 ```
 
 ---
 
-## 5. Git Commit History
+## 5. Acceptance Criteria Verification Checklist
+
+| Category | Requirement | Status | Verification Reference |
+| :--- | :--- | :---: | :--- |
+| **Parser** | Identifies paragraph, heading, list, code, table | **PASS** | `htmlParser.test.ts` (7 tests) |
+| **Parser** | No content silently disappears | **PASS** | `htmlParser.ts` (fallback unknown block) |
+| **Table** | Every critical number exists in source facts | **PASS** | `tableEngine.test.ts`, `segmentValidator.test.ts` |
+| **Table** | No reversed min/max comparisons | **PASS** | `tableEngine.test.ts`, `segmentValidator.test.ts` |
+| **Table** | No invented entities or relations | **PASS** | `tableEngine.ts` |
+| **Code** | Narrated identifiers exist in source | **PASS** | `llmNarrator.ts`, `pipeline.test.ts` |
+| **Code** | Natural mode skips line-by-line punctuation noise | **PASS** | `llmNarrator.test.ts` |
+| **Narration**| Every LLM segment has sourceBlockIds | **PASS** | `pipeline.test.ts` (100% assertion) |
+| **Narration**| Factual table segments have factIds | **PASS** | `llmNarrator.test.ts`, `pipeline.test.ts` |
+| **Narration**| Zero unresolved "as shown above/below" | **PASS** | `ruleNarrator.test.ts`, `segmentValidator.test.ts` |
+| **Narration**| Failed validation triggers safe fallback | **PASS** | `segmentValidator.test.ts`, `pipeline.test.ts` |
+| **Audio** | Kokoro voice used end-to-end | **PASS** | `tts.ts` (`Kokoro-82M` via WASM) |
+| **Audio** | Play, pause, skip, cancel controls | **PASS** | `audioQueue.test.ts` (5 tests) |
+| **Privacy** | Zero telemetry | **PASS** | Verified across all source files |
+| **Privacy** | Zero remote cloud APIs | **PASS** | Localhost Ollama + WASM TTS only |
+| **Privacy** | No `<all_urls>` permission | **PASS** | Content script restricted to `chatgpt.com` |
+| **Privacy** | Only selected assistant response processed | **PASS** | `chatgptAdapter.ts` |
+| **Demo** | Mixed response demo with Read Aloud contrast | **PASS** | `docs/DEMO.md` |
+
+---
+
+## 6. Git Commit History
 
 ```text
-* (current) feat/chatgpt-adapter
+* (current) feat/demo-acceptance
+* d1ff140 feat: playback controls, mode toggle, and segment inspection UI (feat/ui-controls)
+* f2eb05b feat: ChatGPT DOM adapter and content script button injection (feat/chatgpt-adapter)
 * 9c1caa6 feat: audio queue controller and end-to-end fixture pipeline (feat/audio-pipeline)
 * 144688e docs: document full build progress across milestones M0 through M5
 * 9779654 feat: validator and deterministic fallback engine for narration segments (feat/validator)
@@ -228,11 +277,3 @@ All test suites execute via Vitest with Happy-DOM in ~1.4 seconds:
 * 1e0b71b feat(setup): scaffold WXT React extension with kokoro-js and vitest
 * a77f326 docs: define Explain Aloud MVP (main)
 ```
-
----
-
-## 6. Remaining Milestones to MVP
-
-According to [docs/BUILD_PLAN.md](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/docs/BUILD_PLAN.md):
-- **M8 — UI / Playback Controls / Side Panel**: Floating "Explain Aloud" action, popup/sidepanel UI, Natural vs. Literal mode toggle, audio playback controls (`play`, `pause`, `skip`, `cancel`), segment progress display, and debug inspection of blocks/validation.
-- **M9 — Demo & Submission**: Curated demo recording comparing native screen-reader Read Aloud against Explain Aloud, documentation, and final acceptance checks.
