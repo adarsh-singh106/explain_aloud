@@ -8,6 +8,7 @@ export interface AudioPlayerAdapter {
   pause(): void;
   resume(): Promise<void>;
   stop(): void;
+  hasPausedAudio?(): boolean;
   onEnded?: () => void;
 }
 
@@ -54,6 +55,10 @@ export class BrowserAudioPlayer implements AudioPlayerAdapter {
     this.cleanup();
   }
 
+  hasPausedAudio(): boolean {
+    return this.audioElement !== null && this.audioElement.paused;
+  }
+
   private cleanup(): void {
     if (this.currentUrl) {
       URL.revokeObjectURL(this.currentUrl);
@@ -80,8 +85,15 @@ export class AudioQueue {
   private player: AudioPlayerAdapter;
   private synthesizer: SynthesizerFn;
   private options: AudioQueueOptions;
-  private isCancelled = false;
+
+  // Race-prevention tokens
+  private playbackSessionId = 0;
+  private activeSegmentToken = 0;
+
+  // Timers and caches
+  private interSegmentTimer: any = null;
   private audioCache = new Map<number, Promise<Blob>>();
+  private loadedBlobs = new Map<number, Blob>();
 
   constructor(options: AudioQueueOptions = {}) {
     this.options = options;
@@ -106,17 +118,29 @@ export class AudioQueue {
   }
 
   public loadPlan(plan: NarrationPlan): void {
-    this.cancel();
+    this.clearInterSegmentTimer();
+    this.playbackSessionId++;
+    this.activeSegmentToken++;
+    this.player.stop();
+
     this.segments = [...plan.segments];
     this.currentIndex = 0;
     this.audioCache.clear();
+    this.loadedBlobs.clear();
     this.setState('idle');
   }
 
   public async play(): Promise<void> {
     if (this.state === 'paused') {
+      const hasActualPausedAudio = this.player.hasPausedAudio ? this.player.hasPausedAudio() : false;
       this.setState('playing');
-      await this.player.resume();
+
+      if (hasActualPausedAudio) {
+        await this.player.resume();
+      } else {
+        // Paused while synthesizing or skipped while paused: load & start segment
+        await this.playCurrentSegment();
+      }
       return;
     }
 
@@ -125,13 +149,14 @@ export class AudioQueue {
       return;
     }
 
-    this.isCancelled = false;
+    this.playbackSessionId++;
     this.setState('playing');
     await this.playCurrentSegment();
   }
 
   public pause(): void {
     if (this.state === 'playing') {
+      this.clearInterSegmentTimer();
       this.player.pause();
       this.setState('paused');
     }
@@ -142,28 +167,46 @@ export class AudioQueue {
       return;
     }
 
+    this.clearInterSegmentTimer();
     this.player.stop();
+    this.activeSegmentToken++;
+
     const current = this.segments[this.currentIndex];
     if (current) {
       this.options.onSegmentEnd?.(current, this.currentIndex);
     }
+
+    // Release finished segment audio
+    this.audioCache.delete(this.currentIndex);
+    this.loadedBlobs.delete(this.currentIndex);
 
     if (this.currentIndex < this.segments.length - 1) {
       this.currentIndex++;
       if (this.state === 'playing') {
         await this.playCurrentSegment();
       }
+      // If paused, stay paused at the next segment index
     } else {
       this.cancel();
     }
   }
 
   public cancel(): void {
-    this.isCancelled = true;
+    this.clearInterSegmentTimer();
+    this.playbackSessionId++;
+    this.activeSegmentToken++;
     this.player.stop();
     this.currentIndex = 0;
     this.audioCache.clear();
+    this.loadedBlobs.clear();
     this.setState('stopped');
+  }
+
+  private clearInterSegmentTimer(): void {
+    if (this.interSegmentTimer) {
+      clearTimeout(this.interSegmentTimer);
+      this.interSegmentTimer = null;
+    }
   }
 
   private setState(newState: AudioQueueState): void {
@@ -180,50 +223,90 @@ export class AudioQueue {
     if (!segment) return null;
 
     const promise = this.synthesizer(segment.text);
+    // Attach error handler to prevent unhandled rejections
+    promise.catch(() => {});
     this.audioCache.set(index, promise);
     return promise;
   }
 
   private async playCurrentSegment(): Promise<void> {
-    if (this.isCancelled || this.currentIndex >= this.segments.length) {
+    const sessionId = this.playbackSessionId;
+    const segmentToken = ++this.activeSegmentToken;
+    const targetIndex = this.currentIndex;
+
+    if (targetIndex >= this.segments.length) {
       this.setState('stopped');
       return;
     }
 
-    const segment = this.segments[this.currentIndex]!;
-    this.options.onSegmentStart?.(segment, this.currentIndex);
+    const segment = this.segments[targetIndex]!;
+    this.options.onSegmentStart?.(segment, targetIndex);
 
-    // Prefetch the subsequent segment while current starts
-    this.prefetch(this.currentIndex + 1);
+    // Prefetch next segment
+    this.prefetch(targetIndex + 1);
 
     try {
-      // Get or synthesize current audio
-      const audioPromise = this.prefetch(this.currentIndex) || this.synthesizer(segment.text);
-      const audioBlob = await audioPromise;
+      let audioBlob = this.loadedBlobs.get(targetIndex);
+      if (!audioBlob) {
+        const audioPromise = this.prefetch(targetIndex) || this.synthesizer(segment.text);
+        audioBlob = await audioPromise;
+      }
 
-      if (this.isCancelled) return;
+      // Stale check after await
+      if (this.playbackSessionId !== sessionId || this.activeSegmentToken !== segmentToken) {
+        return;
+      }
+
+      // If user paused while synthesis was pending, cache the blob and do not play audio
+      if (this.state === 'paused') {
+        this.loadedBlobs.set(targetIndex, audioBlob);
+        return;
+      }
+
+      if (this.state === 'stopped' || this.state === 'idle') {
+        return;
+      }
 
       await this.player.playBlob(audioBlob);
     } catch (err: any) {
+      if (this.playbackSessionId !== sessionId || this.activeSegmentToken !== segmentToken) {
+        return;
+      }
       this.setState('error');
       this.options.onError?.(err instanceof Error ? err : new Error(String(err)));
     }
   }
 
   private async handleCurrentSegmentFinished(): Promise<void> {
-    if (this.isCancelled) return;
+    const currentSession = this.playbackSessionId;
+    const currentToken = this.activeSegmentToken;
+    const finishedIndex = this.currentIndex;
 
-    const current = this.segments[this.currentIndex];
+    const current = this.segments[finishedIndex];
     if (current) {
-      this.options.onSegmentEnd?.(current, this.currentIndex);
+      this.options.onSegmentEnd?.(current, finishedIndex);
+      // Release finished audio buffer from memory
+      this.audioCache.delete(finishedIndex);
+      this.loadedBlobs.delete(finishedIndex);
 
-      // Handle pauseAfterMs spacing
+      // Handle pauseAfterMs spacing with cancelable timer
       if (current.pauseAfterMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, current.pauseAfterMs));
+        await new Promise<void>((resolve) => {
+          this.interSegmentTimer = setTimeout(() => {
+            this.interSegmentTimer = null;
+            resolve();
+          }, current.pauseAfterMs);
+        });
       }
     }
 
-    if (this.isCancelled) return;
+    // Check if session or state invalidated during inter-segment pause
+    if (this.playbackSessionId !== currentSession || this.activeSegmentToken !== currentToken) {
+      return;
+    }
+    if (this.state !== 'playing') {
+      return;
+    }
 
     if (this.currentIndex < this.segments.length - 1) {
       this.currentIndex++;

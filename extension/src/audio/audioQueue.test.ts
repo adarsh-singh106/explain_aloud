@@ -29,6 +29,10 @@ class MockAudioPlayer implements AudioPlayerAdapter {
     this.isPaused = false;
   }
 
+  hasPausedAudio(): boolean {
+    return this.isPaused;
+  }
+
   simulateTrackEnd(): void {
     this.isPlaying = false;
     this.onEnded?.();
@@ -177,6 +181,109 @@ describe('Milestone M6 — AudioQueue Controller', () => {
 
     expect(queue.getCurrentIndex()).toBe(1);
     expect(onEnd).toHaveBeenCalledWith(dummyPlan.segments[0], 0);
+    expect(onStart).toHaveBeenCalledWith(dummyPlan.segments[1], 1);
+  });
+
+  // --- Audit Reproductions & Acceptance Assertions (A06) ---
+
+  it('prevents audio playback when paused during pending synthesis (A06 probe 1)', async () => {
+    let resolveSynth: ((blob: Blob) => void) | null = null;
+    const slowSynthesizer = vi.fn().mockImplementation(() => {
+      return new Promise<Blob>((resolve) => {
+        resolveSynth = resolve;
+      });
+    });
+
+    const mockPlayer = new MockAudioPlayer();
+    const queue = new AudioQueue({
+      player: mockPlayer,
+      synthesizer: slowSynthesizer,
+    });
+
+    queue.loadPlan(dummyPlan);
+    const playPromise = queue.play();
+
+    // User pauses while synthesis is still running
+    queue.pause();
+    expect(queue.getState()).toBe('paused');
+
+    // Synthesis now completes
+    resolveSynth!(new Blob(['late audio']));
+    await playPromise;
+
+    // Must NOT start playing audio while in paused state!
+    expect(queue.getState()).toBe('paused');
+    expect(mockPlayer.isPlaying).toBe(false);
+  });
+
+  it('cancels stale synthesis when cancel + load new plan occurs (A06 probe 2)', async () => {
+    let resolveOldSynth: any = null;
+    const mockSynthesizer = vi.fn().mockImplementation((text: string) => {
+      if (text === 'Old Plan Segment') {
+        return new Promise<Blob>((resolve) => {
+          resolveOldSynth = resolve;
+        });
+      }
+      return Promise.resolve(new Blob(['new audio']));
+    });
+
+    const mockPlayer = new MockAudioPlayer();
+    const queue = new AudioQueue({
+      player: mockPlayer,
+      synthesizer: mockSynthesizer,
+    });
+
+    // Start old plan
+    queue.loadPlan({
+      responseId: 'old-plan',
+      segments: [{ id: 's-old', sourceBlockIds: ['b-old'], factIds: [], provenance: 'literal', text: 'Old Plan Segment', verified: true, pauseAfterMs: 0 }],
+    });
+    queue.play();
+
+    // Cancel old plan, load new plan, and start playing new plan
+    queue.cancel();
+    queue.loadPlan({
+      responseId: 'new-plan',
+      segments: [{ id: 's-new', sourceBlockIds: ['b-new'], factIds: [], provenance: 'literal', text: 'New Plan Segment', verified: true, pauseAfterMs: 0 }],
+    });
+    await queue.play();
+
+    // Now old synthesis finally resolves
+    if (resolveOldSynth) {
+      resolveOldSynth(new Blob(['stale audio']));
+    }
+
+    // Play count should only reflect the new plan, not the cancelled old plan
+    expect(mockPlayer.playCount).toBe(1);
+  });
+
+  it('properly advances and resumes when skipped while paused (A06 probe 3)', async () => {
+    const mockPlayer = new MockAudioPlayer();
+    const mockSynthesizer = vi.fn().mockResolvedValue(new Blob(['fake audio']));
+    const onStart = vi.fn();
+
+    const queue = new AudioQueue({
+      player: mockPlayer,
+      synthesizer: mockSynthesizer,
+      onSegmentStart: onStart,
+    });
+
+    queue.loadPlan(dummyPlan);
+    await queue.play();
+
+    // Pause first segment
+    queue.pause();
+    expect(queue.getState()).toBe('paused');
+
+    // Skip to next segment while paused
+    await queue.skip();
+    expect(queue.getCurrentIndex()).toBe(1);
+    expect(queue.getState()).toBe('paused');
+
+    // Now resume
+    await queue.play();
+    expect(queue.getState()).toBe('playing');
+    expect(mockPlayer.isPlaying).toBe(true);
     expect(onStart).toHaveBeenCalledWith(dummyPlan.segments[1], 1);
   });
 });
