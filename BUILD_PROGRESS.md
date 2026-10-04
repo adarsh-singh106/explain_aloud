@@ -1,11 +1,11 @@
 # Explain Aloud — Comprehensive Build & Progress Report
 
 **Generated:** 2026-10-04  
-**Current Milestone Completed:** M6 (Audio & End-to-End Fixture Pipeline)  
-**Current Git Branch:** `feat/audio-pipeline`  
-**Overall Test Suite Status:** 50 tests passed across 9 test files (100% pass rate)  
+**Current Milestone Completed:** M7 (ChatGPT DOM Adapter)  
+**Current Git Branch:** `feat/chatgpt-adapter`  
+**Overall Test Suite Status:** 58 tests passed across 10 test files (100% pass rate)  
 **TypeScript Typecheck:** 0 errors (`tsc --noEmit`)  
-**WXT Build:** Clean production bundle (~760ms build time)  
+**WXT Build:** Clean production bundle (~795ms build time)  
 
 ---
 
@@ -175,24 +175,40 @@ To protect `main` as a clean, deployable baseline and isolate each milestone for
 
 ---
 
+### Milestone M7 — ChatGPT DOM Adapter (`feat/chatgpt-adapter`)
+- **ChatGPT DOM Adapter** ([`extension/src/adapter/chatgptAdapter.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/src/adapter/chatgptAdapter.ts)):
+  - **Assistant Turn Detection**: Selects completed assistant messages via `[data-message-author-role="assistant"]`, `article`, or `data-fixture="assistant-response"`.
+  - **Streaming Detection (`isResponseStreaming`)**: Checks for `.result-streaming` indicators and active stop-generation controls, ensuring only completed responses are parsed.
+  - **Content Container Extraction (`extractResponseContentElement`)**: Pinpoints the `.markdown, .prose` container holding structured elements.
+  - **Action Button Injection (`injectExplainAloudButton`)**: Dynamically attaches an accessible "Explain Aloud" action button to assistant response footers, with duplicate injection guards.
+  - **ResponseIR Extraction (`extractResponseIRFromElement`)**: Directly turns the targeted ChatGPT assistant element into typed `ResponseIR` blocks.
+- **Content Script Integration** ([`extension/entrypoints/content.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/entrypoints/content.ts)):
+  - Strictly limited matches to `https://chatgpt.com/*` and `https://chat.openai.com/*` (no `<all_urls>`, satisfying privacy requirements).
+  - Uses `MutationObserver` to monitor ChatGPT conversation turns and wire buttons seamlessly as responses complete.
+- **Unit Tests** ([`extension/src/adapter/chatgptAdapter.test.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/src/adapter/chatgptAdapter.test.ts)):
+  - 8 unit tests covering streaming detection, markdown extraction, assistant turn filtering, `ResponseIR` extraction, and duplicate-safe button injection.
+
+---
+
 ## 4. Complete Test Results
 
-All test suites execute via Vitest with Happy-DOM in ~1.2 seconds:
+All test suites execute via Vitest with Happy-DOM in ~1.4 seconds:
 
 ```text
- ✓ src/narrator/ruleNarrator.test.ts (10 tests) 15ms
- ✓ src/smoke.test.ts (1 test) 4ms
- ✓ src/table/tableEngine.test.ts (8 tests) 10ms
- ✓ src/validator/segmentValidator.test.ts (6 tests) 15ms
- ✓ src/parser/htmlParser.test.ts (7 tests) 37ms
- ✓ src/narrator/llmNarrator.test.ts (10 tests) 19ms
- ✓ src/pipeline/pipeline.test.ts (2 tests) 44ms
+ ✓ src/smoke.test.ts (1 test) 3ms
+ ✓ src/table/tableEngine.test.ts (8 tests) 16ms
+ ✓ src/parser/htmlParser.test.ts (7 tests) 33ms
+ ✓ src/validator/segmentValidator.test.ts (6 tests) 12ms
+ ✓ src/narrator/ruleNarrator.test.ts (10 tests) 18ms
+ ✓ src/narrator/llmNarrator.test.ts (10 tests) 17ms
+ ✓ src/adapter/chatgptAdapter.test.ts (8 tests) 44ms
+ ✓ src/pipeline/pipeline.test.ts (2 tests) 38ms
  ✓ src/kokoro.test.ts (1 test) 3ms
- ✓ src/audio/audioQueue.test.ts (5 tests) 80ms
+ ✓ src/audio/audioQueue.test.ts (5 tests) 79ms
 
- Test Files  9 passed (9)
-      Tests  50 passed (50)
-   Duration  1.20s
+ Test Files  10 passed (10)
+      Tests  58 passed (58)
+   Duration  1.44s
 ```
 
 ---
@@ -200,7 +216,8 @@ All test suites execute via Vitest with Happy-DOM in ~1.2 seconds:
 ## 5. Git Commit History
 
 ```text
-* (current) feat/audio-pipeline
+* (current) feat/chatgpt-adapter
+* 9c1caa6 feat: audio queue controller and end-to-end fixture pipeline (feat/audio-pipeline)
 * 144688e docs: document full build progress across milestones M0 through M5
 * 9779654 feat: validator and deterministic fallback engine for narration segments (feat/validator)
 * f57a4e3 feat: LLM narrator for code and table blocks with structured JSON and fallback (feat/llm-narrator)
@@ -217,6 +234,5 @@ All test suites execute via Vitest with Happy-DOM in ~1.2 seconds:
 ## 6. Remaining Milestones to MVP
 
 According to [docs/BUILD_PLAN.md](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/docs/BUILD_PLAN.md):
-- **M7 — ChatGPT Adapter**: Content script DOM observer that extracts completed assistant responses directly from ChatGPT web interface.
-- **M8 — UI / Side Panel**: Floating "Explain Aloud" action button, side panel drawer, Natural vs. Literal mode toggle, and debug view showing block extraction and validation status.
+- **M8 — UI / Playback Controls / Side Panel**: Floating "Explain Aloud" action, popup/sidepanel UI, Natural vs. Literal mode toggle, audio playback controls (`play`, `pause`, `skip`, `cancel`), segment progress display, and debug inspection of blocks/validation.
 - **M9 — Demo & Submission**: Curated demo recording comparing native screen-reader Read Aloud against Explain Aloud, documentation, and final acceptance checks.
