@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+extension/node_modules/
+
+# Build outputs
+.output/
+extension/.output/
+.wxt/
+extension/.wxt/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
