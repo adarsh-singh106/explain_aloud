@@ -114,6 +114,6 @@ describe('Milestone M6 — End-to-End Fixture Pipeline', () => {
     expect(tableSeg?.provenance).toBe('rule');
     expect(tableSeg?.text).toContain('The table compares 3 models');
     expect(tableSeg?.fallbackReason).toContain('unsupported_number:99');
-    expect(tableSeg?.verified).toBe(true);
+    expect(tableSeg?.verified).toBe(false);
   });
 });

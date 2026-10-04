@@ -5,16 +5,9 @@ import { extractTableFacts, generateDeterministicTableSummary } from '@/src/tabl
 
 export type NarrationMode = 'natural' | 'literal';
 
-interface LLMCodeResponse {
-  segments?: { text: string }[];
-  text?: string;
-  explanation?: string;
-}
-
-interface LLMTableResponse {
-  segments?: { text: string; factIds?: string[] }[];
-  text?: string;
-  comparison?: string;
+export interface ValidatedLlmSegment {
+  text: string;
+  factIds?: string[];
 }
 
 /**
@@ -36,6 +29,50 @@ export function extractJsonFromLlm(raw: string): any {
   }
 
   return JSON.parse(cleaned);
+}
+
+/**
+ * Validates and enforces runtime schema on parsed LLM output.
+ * Prevents type errors, malformed structures, or empty strings from proceeding.
+ */
+export function validateLlmSegments(data: any): ValidatedLlmSegment[] {
+  if (!data || typeof data !== 'object') {
+    throw new Error('LLM output is not a valid JSON object');
+  }
+
+  let rawList: any[] = [];
+  if (Array.isArray(data.segments)) {
+    rawList = data.segments;
+  } else if (typeof data.text === 'string' && data.text.trim()) {
+    rawList = [{ text: data.text, factIds: Array.isArray(data.factIds) ? data.factIds : undefined }];
+  } else if (typeof data.comparison === 'string' && data.comparison.trim()) {
+    rawList = [{ text: data.comparison, factIds: Array.isArray(data.factIds) ? data.factIds : undefined }];
+  } else if (typeof data.explanation === 'string' && data.explanation.trim()) {
+    rawList = [{ text: data.explanation, factIds: undefined }];
+  } else {
+    throw new Error('LLM output missing text or segments array');
+  }
+
+  const validated: ValidatedLlmSegment[] = [];
+  for (const item of rawList) {
+    if (!item || typeof item !== 'object') continue;
+    if (typeof item.text !== 'string' || !item.text.trim()) continue;
+
+    const factIds = Array.isArray(item.factIds)
+      ? item.factIds.filter((id: any) => typeof id === 'string' && id.trim())
+      : undefined;
+
+    validated.push({
+      text: item.text.trim(),
+      factIds,
+    });
+  }
+
+  if (validated.length === 0) {
+    throw new Error('No non-empty text segments found in LLM output');
+  }
+
+  return validated;
 }
 
 /**
@@ -63,7 +100,7 @@ ${code}
 Explain the purpose, control flow, conditions, and actions of this code for someone listening without a screen.
 Rules:
 - Do not read punctuation (colons, braces, indentations) line by line.
-- Do not invent behavior or unseen functions.
+- Do not invent behavior, unseen functions, or actions not present in the code.
 - State only what the code does directly.
 - Return 1 to 2 spoken sentences.`;
 }
@@ -84,28 +121,23 @@ export async function narrateCodeBlock(
 
   try {
     const rawResponse = await generateWithGemma(prompt, model);
-    const parsed: LLMCodeResponse = extractJsonFromLlm(rawResponse);
+    const parsed = extractJsonFromLlm(rawResponse);
+    const validatedSegments = validateLlmSegments(parsed);
 
-    const rawSegments = parsed.segments || (parsed.text ? [{ text: parsed.text }] : (parsed.explanation ? [{ text: parsed.explanation }] : []));
-
-    if (rawSegments.length === 0) {
-      throw new Error('LLM returned empty segments for code block');
-    }
-
-    return rawSegments.map((seg, idx) => ({
+    return validatedSegments.map((seg, idx) => ({
       id: `seg-${block.id}-${idx}`,
       sourceBlockIds: [block.id],
       factIds: [],
       provenance: 'llm',
-      text: seg.text.trim(),
-      verified: false, // Verified by M5 validator
+      text: seg.text,
+      verified: false, // Must be verified by validator
       pauseAfterMs: 350,
     }));
   } catch (err: any) {
-    // Deterministic fallback for code
+    // Source-derived safe fallback for code: NEVER invent unseen behavior
     const fallbackText = mode === 'literal'
       ? `Code snippet in ${language}: ${code.replace(/\s+/g, ' ').trim()}`
-      : `Here is a ${language} snippet that iterates over active users and sends each an email.`;
+      : `Verified explanation is unavailable for this ${language} code block. Code: ${code.replace(/\s+/g, ' ').trim()}`;
 
     return [
       {
@@ -114,7 +146,7 @@ export async function narrateCodeBlock(
         factIds: [],
         provenance: 'literal',
         text: fallbackText,
-        verified: true,
+        verified: false,
         fallbackReason: `LLM error: ${err.message || String(err)}`,
         pauseAfterMs: 350,
       },
@@ -129,6 +161,9 @@ export function buildTablePrompt(facts: Fact[]): string {
   const factDescriptions = facts.map((f) => {
     if (f.kind === 'comparison') {
       const val = f.value as any;
+      if (val.isTie) {
+        return `- factId: "${f.id}", Metric: ${val.metric}, All entities tied at: ${val.highest.raw}`;
+      }
       return `- factId: "${f.id}", Metric: ${val.metric}, Highest: ${val.highest.entity} (${val.highest.raw}), Lowest: ${val.lowest.entity} (${val.lowest.raw})`;
     }
     if (f.kind === 'number') {
@@ -137,6 +172,9 @@ export function buildTablePrompt(facts: Fact[]): string {
     }
     if (f.kind === 'identifier') {
       const val = f.value as any;
+      if (val.text) {
+        return `- factId: "${f.id}", Entity: ${val.entity}, Metric: ${val.metric}, Value: ${val.text}`;
+      }
       return `- factId: "${f.id}", Identifier: ${val.entity} (${val.entityType})`;
     }
     return `- factId: "${f.id}", Value: ${JSON.stringify(f.value)}`;
@@ -182,23 +220,16 @@ export async function narrateTableBlock(
 
   try {
     const rawResponse = await generateWithGemma(prompt, model);
-    const parsed: LLMTableResponse = extractJsonFromLlm(rawResponse);
+    const parsed = extractJsonFromLlm(rawResponse);
+    const validatedSegments = validateLlmSegments(parsed);
 
-    const rawSegments = parsed.segments ||
-      (parsed.comparison ? [{ text: parsed.comparison, factIds: facts.map((f) => f.id) }] :
-      (parsed.text ? [{ text: parsed.text, factIds: facts.map((f) => f.id) }] : []));
-
-    if (rawSegments.length === 0) {
-      throw new Error('LLM returned empty segments for table');
-    }
-
-    return rawSegments.map((seg, idx) => ({
+    return validatedSegments.map((seg, idx) => ({
       id: `seg-${block.id}-${idx}`,
       sourceBlockIds: [block.id],
       factIds: seg.factIds || facts.map((f) => f.id),
       provenance: 'llm',
-      text: seg.text.trim(),
-      verified: false, // To be verified by M5
+      text: seg.text,
+      verified: false, // To be verified by M5 validator
       pauseAfterMs: 350,
     }));
   } catch (err: any) {
@@ -210,7 +241,7 @@ export async function narrateTableBlock(
         factIds: facts.map((f) => f.id),
         provenance: 'rule',
         text: generateDeterministicTableSummary(block),
-        verified: true,
+        verified: false,
         fallbackReason: `LLM error: ${err.message || String(err)}`,
         pauseAfterMs: 400,
       },

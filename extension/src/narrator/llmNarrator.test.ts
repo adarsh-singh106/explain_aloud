@@ -96,7 +96,7 @@ describe('Milestone M4 — LLM Narrator', () => {
       expect(segments[0]?.text).toContain('loops through each user');
     });
 
-    it('falls back safely to literal rendering when LLM call fails', async () => {
+    it('falls back safely to source-derived rendering without invented behavior when LLM call fails', async () => {
       vi.spyOn(ollamaService, 'generateWithGemma').mockRejectedValueOnce(
         new Error('Ollama connection timeout')
       );
@@ -105,7 +105,28 @@ describe('Milestone M4 — LLM Narrator', () => {
       expect(segments).toHaveLength(1);
       expect(segments[0]?.provenance).toBe('literal');
       expect(segments[0]?.fallbackReason).toContain('Ollama connection timeout');
-      expect(segments[0]?.text).toBeTruthy();
+      expect(segments[0]?.verified).toBe(false);
+      expect(segments[0]?.text).toContain('Verified explanation is unavailable for this python code block');
+      expect(segments[0]?.text).toContain('for user in users:');
+    });
+
+    it('produces NO invented email or user behavior on unrelated code (probe A01)', async () => {
+      const printBlock: Block = {
+        id: 'block-print-42',
+        order: 1,
+        type: 'code',
+        raw: 'print(42)',
+        language: 'python',
+        structured: { language: 'python', code: 'print(42)' } as CodeStructured,
+      };
+
+      vi.spyOn(ollamaService, 'generateWithGemma').mockRejectedValueOnce(new Error('Model offline'));
+
+      const segments = await narrateCodeBlock(printBlock, 'natural');
+      expect(segments[0]?.text).not.toContain('email');
+      expect(segments[0]?.text).not.toContain('active users');
+      expect(segments[0]?.text).toContain('print(42)');
+      expect(segments[0]?.verified).toBe(false);
     });
   });
 
@@ -153,6 +174,7 @@ describe('Milestone M4 — LLM Narrator', () => {
       expect(segments).toHaveLength(1);
       expect(segments[0]?.provenance).toBe('rule');
       expect(segments[0]?.fallbackReason).toContain('Model busy');
+      expect(segments[0]?.verified).toBe(false);
       expect(segments[0]?.text).toContain('The table compares 3 models');
     });
   });

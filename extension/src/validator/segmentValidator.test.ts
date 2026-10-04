@@ -110,6 +110,172 @@ describe('Milestone M5 — Validator & Fallback Engine', () => {
       const result = validateSegment(segment, undefined, facts);
       expect(result.valid).toBe(false);
       expect(result.reasons).toContain('missing_source_block_ids');
+      expect(result.validatedSegment.text).toBe('Content for this segment is unavailable.');
+      expect(result.validatedSegment.verified).toBe(false);
+    });
+
+    // --- Audit Reproductions & Acceptance Assertions (A02, A03, A14) ---
+
+    it('rejects wrong entity-metric binding: "Model B has 92% accuracy" (A02 counterexample 1)', () => {
+      const segment: NarrationSegment = {
+        id: 'seg-binding',
+        sourceBlockIds: ['block-table-1'],
+        factIds: [],
+        provenance: 'llm',
+        text: 'Model B has 92% accuracy.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      const result = validateSegment(segment, tableBlock, facts, [tableBlock]);
+      expect(result.valid).toBe(false);
+      expect(result.reasons.some((r) => r.includes('falsified_entity_binding'))).toBe(true);
+    });
+
+    it('rejects invented entity: "Model Z has 92% accuracy" (A02 counterexample 2)', () => {
+      const segment: NarrationSegment = {
+        id: 'seg-invented-ent',
+        sourceBlockIds: ['block-table-1'],
+        factIds: [],
+        provenance: 'llm',
+        text: 'Model Z has 92% accuracy.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      const result = validateSegment(segment, tableBlock, facts, [tableBlock]);
+      expect(result.valid).toBe(false);
+      expect(result.reasons.some((r) => r.includes('unsupported_entity'))).toBe(true);
+    });
+
+    it('rejects spelled-out numbers: "Model B has ninety-nine percent accuracy" (A02 counterexample 3)', () => {
+      const segment: NarrationSegment = {
+        id: 'seg-spelled-num',
+        sourceBlockIds: ['block-table-1'],
+        factIds: [],
+        provenance: 'llm',
+        text: 'Model B has ninety-nine percent accuracy.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      const result = validateSegment(segment, tableBlock, facts, [tableBlock]);
+      expect(result.valid).toBe(false);
+      expect(result.reasons).toContain('unsupported_number:99');
+    });
+
+    it('rejects paraphrased reversed comparison: "Model B outperforms Model A on accuracy" (A02 counterexample 4)', () => {
+      const segment: NarrationSegment = {
+        id: 'seg-rev-comp',
+        sourceBlockIds: ['block-table-1'],
+        factIds: [],
+        provenance: 'llm',
+        text: 'Model B outperforms Model A on accuracy.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      const result = validateSegment(segment, tableBlock, facts, [tableBlock]);
+      expect(result.valid).toBe(false);
+      expect(result.reasons).toContain('reversed_comparison:Accuracy');
+    });
+
+    it('rejects unsupported causality: "Model A has 92% accuracy because it uses a larger training set" (A02 counterexample 5)', () => {
+      const segment: NarrationSegment = {
+        id: 'seg-causality',
+        sourceBlockIds: ['block-table-1'],
+        factIds: [],
+        provenance: 'llm',
+        text: 'Model A has 92% accuracy because it uses a larger training set.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      const result = validateSegment(segment, tableBlock, facts, [tableBlock]);
+      expect(result.valid).toBe(false);
+      expect(result.reasons).toContain('unsupported_causality');
+    });
+
+    it('rejects invalid or foreign factIds and sourceBlockIds (A02)', () => {
+      const segment: NarrationSegment = {
+        id: 'seg-foreign-fact',
+        sourceBlockIds: ['block-table-1'],
+        factIds: ['fact-nonexistent-123'],
+        provenance: 'llm',
+        text: 'Model A leads with 92% accuracy.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      const result = validateSegment(segment, tableBlock, facts, [tableBlock]);
+      expect(result.valid).toBe(false);
+      expect(result.reasons).toContain('invalid_fact_id:fact-nonexistent-123');
+    });
+
+    it('does not crash regex when entity name contains special regex characters (A14)', () => {
+      const tableWithSpecialChars: Block = {
+        id: 'block-special',
+        order: 1,
+        type: 'table',
+        raw: '<table>...</table>',
+        structured: {
+          headers: ['Model', 'Score'],
+          rows: [
+            ['Model A (v2)', '90%'],
+            ['Model B [beta]+', '80%'],
+          ],
+        } as TableStructured,
+      };
+
+      const specialFacts = extractTableFacts(tableWithSpecialChars);
+      const segment: NarrationSegment = {
+        id: 'seg-special',
+        sourceBlockIds: ['block-special'],
+        factIds: [],
+        provenance: 'llm',
+        text: 'Model B [beta]+ is highest in score at 80%.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      expect(() => {
+        const res = validateSegment(segment, tableWithSpecialChars, specialFacts, [tableWithSpecialChars]);
+        expect(res.valid).toBe(false); // Reversed comparison
+      }).not.toThrow();
+    });
+
+    it('replaces rejected code narration with literal source code instead of returning hallucinated candidate text (A03)', () => {
+      const codeBlock: Block = {
+        id: 'block-code-test',
+        order: 2,
+        type: 'code',
+        raw: 'print(42)',
+        language: 'python',
+        structured: { language: 'python', code: 'print(42)' },
+      };
+
+      const rejectedCandidate: NarrationSegment = {
+        id: 'seg-code-hallucinated',
+        sourceBlockIds: ['block-code-test'],
+        factIds: [],
+        provenance: 'llm',
+        text: 'Open brace, calls delete_database and uploads all records.',
+        verified: false,
+        pauseAfterMs: 350,
+      };
+
+      const result = validateSegment(rejectedCandidate, codeBlock, [], [codeBlock]);
+      expect(result.valid).toBe(false);
+      expect(result.reasons).toContain('punctuation_noise_in_natural_mode');
+      expect(result.reasons).toContain('unsupported_code_claim:delete_database');
+      expect(result.reasons).toContain('unsupported_code_claim:uploads');
+
+      // Crucial: Fallback must NEVER be the hallucinated candidate text!
+      expect(result.validatedSegment.text).not.toContain('delete_database');
+      expect(result.validatedSegment.text).not.toContain('uploads');
+      expect(result.validatedSegment.text).toBe('Code snippet in python: print(42)');
+      expect(result.validatedSegment.verified).toBe(false);
+      expect(result.validatedSegment.provenance).toBe('literal');
     });
   });
 

@@ -123,6 +123,103 @@ describe('Milestone M3 — Table Engine', () => {
       expect(summary).toContain('Model B is lowest at 88%');
       expect(summary).toContain('Model A is highest at 4 sec');
       expect(summary).toContain('Model B is lowest at 1 sec');
+      // Model C is also preserved
+      expect(summary).toContain('Model C has Accuracy 90%, Latency 2 sec');
+    });
+
+    it('correctly normalizes duration units (e.g., 900 ms vs 2 sec)', () => {
+      const durationTable: Block = {
+        id: 'block-dur',
+        order: 1,
+        type: 'table',
+        raw: '<table>...</table>',
+        structured: {
+          headers: ['Model', 'Latency'],
+          rows: [
+            ['Model A', '900 ms'],
+            ['Model B', '2 sec'],
+          ],
+        } as TableStructured,
+      };
+
+      const facts = extractTableFacts(durationTable);
+      const compFacts = facts.filter((f) => f.kind === 'comparison');
+      expect(compFacts).toHaveLength(1);
+
+      const latComp = compFacts[0]!.value as any;
+      // 2 sec (2.0s) > 900 ms (0.9s), so Model B is highest and Model A is lowest!
+      expect(latComp.highest.entity).toBe('Model B');
+      expect(latComp.highest.raw).toBe('2 sec');
+      expect(latComp.lowest.entity).toBe('Model A');
+      expect(latComp.lowest.raw).toBe('900 ms');
+    });
+
+    it('does not generate false comparisons when units are incompatible (e.g. $ vs €)', () => {
+      const mixedCurrencyTable: Block = {
+        id: 'block-curr',
+        order: 1,
+        type: 'table',
+        raw: '<table>...</table>',
+        structured: {
+          headers: ['Service', 'Cost'],
+          rows: [
+            ['Service A', '$10'],
+            ['Service B', '€10'],
+          ],
+        } as TableStructured,
+      };
+
+      const facts = extractTableFacts(mixedCurrencyTable);
+      const compFacts = facts.filter((f) => f.kind === 'comparison');
+      // Must NOT compare $ with €
+      expect(compFacts).toHaveLength(0);
+    });
+
+    it('accurately represents ties in comparisons', () => {
+      const tiedTable: Block = {
+        id: 'block-tied',
+        order: 1,
+        type: 'table',
+        raw: '<table>...</table>',
+        structured: {
+          headers: ['Candidate', 'Score'],
+          rows: [
+            ['Alice', '95%'],
+            ['Bob', '95%'],
+          ],
+        } as TableStructured,
+      };
+
+      const facts = extractTableFacts(tiedTable);
+      const compFacts = facts.filter((f) => f.kind === 'comparison');
+      expect(compFacts).toHaveLength(1);
+      const scoreComp = compFacts[0]!.value as any;
+      expect(scoreComp.isTie).toBe(true);
+
+      const summary = generateDeterministicTableSummary(tiedTable);
+      expect(summary).toContain('all candidates are tied at 95%');
+    });
+
+    it('preserves non-numeric text columns like License', () => {
+      const textColTable: Block = {
+        id: 'block-lic',
+        order: 1,
+        type: 'table',
+        raw: '<table>...</table>',
+        structured: {
+          headers: ['Library', 'License'],
+          rows: [
+            ['LibA', 'MIT'],
+            ['LibB', 'Apache-2.0'],
+          ],
+        } as TableStructured,
+      };
+
+      const facts = extractTableFacts(textColTable);
+      const textFacts = facts.filter((f) => f.kind === 'identifier' && (f.value as any).text);
+      expect(textFacts).toHaveLength(2);
+      expect((textFacts[0]!.value as any).text).toBe('MIT');
+      expect((textFacts[1]!.value as any).text).toBe('Apache-2.0');
     });
   });
 });
