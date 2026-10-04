@@ -116,4 +116,30 @@ describe('Milestone M6 — End-to-End Fixture Pipeline', () => {
     expect(tableSeg?.fallbackReason).toContain('unsupported_number:99');
     expect(tableSeg?.verified).toBe(false);
   });
+
+  it('runs Literal mode fully deterministically without calling Ollama (A12)', async () => {
+    const ollamaSpy = vi.spyOn(ollamaService, 'generateWithGemma');
+
+    const result = await executePipelineFromHtml(fixtureHtml, {
+      mode: 'literal',
+      responseId: 'test-literal-fixture',
+    });
+
+    // In Literal mode, neither code nor table should call Ollama!
+    expect(ollamaSpy).not.toHaveBeenCalled();
+
+    // Code is literal
+    const codeSeg = result.plan.segments.find((s) => s.sourceBlockIds.includes('block-3'));
+    expect(codeSeg?.provenance).toBe('literal');
+    expect(codeSeg?.text).toContain('for user in users:');
+    expect(codeSeg?.text).toContain('send_email(user)');
+
+    // Table is literal cell readout
+    const tableSeg = result.plan.segments.find((s) => s.sourceBlockIds.includes('block-4'));
+    expect(tableSeg?.provenance).toBe('literal');
+    expect(tableSeg?.text).toContain('Model A: Accuracy: 92%, Latency: 4 sec');
+    expect(tableSeg?.text).toContain('Model B: Accuracy: 88%, Latency: 1 sec');
+    expect(tableSeg?.text).toContain('Model C: Accuracy: 90%, Latency: 2 sec');
+  });
 });
+

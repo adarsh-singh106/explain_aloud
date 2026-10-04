@@ -187,5 +187,71 @@ describe('Milestone M1 — ResponseIR Parser', () => {
         'For an interactive product, the tradeoff between speed and accuracy should be explicit.'
       );
     });
+
+    // --- Audit Reproductions & Acceptance Assertions (A10) ---
+
+    it('correctly classifies a table containing inline <code> cells as a table, not code (A10 probe)', () => {
+      const html = `
+        <article>
+          <table>
+            <thead>
+              <tr><th>Function</th><th>Return Type</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>get_user()</code></td><td><code>User</code></td></tr>
+              <tr><td><code>save_data()</code></td><td><code>bool</code></td></tr>
+            </tbody>
+          </table>
+        </article>
+      `;
+
+      const ir = parseResponseHtml(html);
+      expect(ir.blocks).toHaveLength(1);
+      expect(ir.blocks[0]?.type).toBe('table');
+      const table = ir.blocks[0]?.structured as TableStructured;
+      expect(table.headers).toEqual(['Function', 'Return Type']);
+      expect(table.rows).toEqual([
+        ['get_user()', 'User'],
+        ['save_data()', 'bool'],
+      ]);
+    });
+
+    it('preserves direct text nodes as paragraph blocks without dropping them (A10 probe)', () => {
+      const html = `
+        <article>
+          Direct leading text note that has no paragraph tag.
+          <p>Standard paragraph.</p>
+          Trailing direct text note.
+        </article>
+      `;
+
+      const ir = parseResponseHtml(html);
+      expect(ir.blocks).toHaveLength(3);
+      expect(ir.blocks[0]?.type).toBe('paragraph');
+      expect((ir.blocks[0]?.structured as ParagraphStructured).text).toContain('Direct leading text note');
+      expect(ir.blocks[1]?.type).toBe('paragraph');
+      expect(ir.blocks[2]?.type).toBe('paragraph');
+      expect((ir.blocks[2]?.structured as ParagraphStructured).text).toContain('Trailing direct text note');
+    });
+
+    it('unwraps presentation-only containers around tables (A10 probe)', () => {
+      const html = `
+        <article>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>A</th><th>B</th></tr></thead>
+              <tbody><tr><td>1</td><td>2</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+      `;
+
+      const ir = parseResponseHtml(html);
+      expect(ir.blocks).toHaveLength(1);
+      expect(ir.blocks[0]?.type).toBe('table');
+      const table = ir.blocks[0]?.structured as TableStructured;
+      expect(table.headers).toEqual(['A', 'B']);
+    });
   });
 });
+

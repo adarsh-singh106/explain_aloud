@@ -1,6 +1,5 @@
 import type {
   Block,
-  BlockType,
   HeadingStructured,
   ParagraphStructured,
   ListStructured,
@@ -21,13 +20,26 @@ function extractLanguage(element: Element): string | undefined {
 }
 
 /**
- * Parses a single DOM element into a typed Block.
+ * Parses a single DOM element or Node into a typed Block.
  */
 export function parseElementToBlock(element: Element, index: number): Block {
   const tagName = element.tagName.toLowerCase();
   const raw = element.outerHTML;
   const id = `block-${index}`;
 
+  // 1. Unwrap presentation containers (e.g. div.table-wrapper or div.code-block)
+  if (tagName === 'div' || tagName === 'section') {
+    const tableChild = element.querySelector(':scope > table') || (element.children.length === 1 ? element.querySelector('table') : null);
+    if (tableChild) {
+      return parseElementToBlock(tableChild, index);
+    }
+    const preChild = element.querySelector(':scope > pre') || (element.children.length === 1 ? element.querySelector('pre') : null);
+    if (preChild) {
+      return parseElementToBlock(preChild, index);
+    }
+  }
+
+  // 2. Heading: <h1> - <h6>
   if (/^h[1-6]$/.test(tagName)) {
     const level = parseInt(tagName.charAt(1), 10);
     const text = element.textContent?.trim() || '';
@@ -41,6 +53,7 @@ export function parseElementToBlock(element: Element, index: number): Block {
     };
   }
 
+  // 3. Paragraph: <p>
   if (tagName === 'p') {
     const text = element.textContent?.trim() || '';
     const structured: ParagraphStructured = { text };
@@ -53,6 +66,7 @@ export function parseElementToBlock(element: Element, index: number): Block {
     };
   }
 
+  // 4. List: <ul> or <ol>
   if (tagName === 'ul' || tagName === 'ol') {
     const ordered = tagName === 'ol';
     const items: string[] = [];
@@ -71,21 +85,7 @@ export function parseElementToBlock(element: Element, index: number): Block {
     };
   }
 
-  if (tagName === 'pre' || element.querySelector('code')) {
-    const codeEl = element.querySelector('code') || element;
-    const language = extractLanguage(element) || extractLanguage(codeEl) || 'plaintext';
-    const code = codeEl.textContent || '';
-    const structured: CodeStructured = { language, code };
-    return {
-      id,
-      order: index,
-      type: 'code',
-      raw,
-      language,
-      structured,
-    };
-  }
-
+  // 5. Table: <table> (Must precede code block detection to avoid inline <code> stealing tables!)
   if (tagName === 'table') {
     const headers: string[] = [];
     const rows: string[][] = [];
@@ -96,18 +96,23 @@ export function parseElementToBlock(element: Element, index: number): Block {
       theadThs.forEach((th) => headers.push(th.textContent?.trim() || ''));
     } else {
       const firstRowThs = element.querySelectorAll('tr:first-child th');
-      firstRowThs.forEach((th) => headers.push(th.textContent?.trim() || ''));
+      if (firstRowThs.length > 0) {
+        firstRowThs.forEach((th) => headers.push(th.textContent?.trim() || ''));
+      }
     }
 
-    // Row cells: check <tbody> or non-header <tr>
-    const bodyRows = element.querySelectorAll('tbody tr');
-    const targetRows = bodyRows.length > 0 ? bodyRows : element.querySelectorAll('tr');
-
-    targetRows.forEach((tr, trIdx) => {
+    // Row cells: check all <tr> elements
+    const allTrs = Array.from(element.querySelectorAll('tr'));
+    allTrs.forEach((tr, trIdx) => {
       // If we used the first row as headers and there was no <thead>, skip the first row
-      if (bodyRows.length === 0 && headers.length > 0 && trIdx === 0 && tr.querySelector('th')) {
+      if (theadThs.length === 0 && headers.length > 0 && trIdx === 0) {
         return;
       }
+      // Check if tr is in thead
+      if (tr.parentElement?.tagName.toLowerCase() === 'thead') {
+        return;
+      }
+
       const rowCells: string[] = [];
       tr.querySelectorAll('td, th').forEach((cell) => {
         rowCells.push(cell.textContent?.trim() || '');
@@ -117,12 +122,36 @@ export function parseElementToBlock(element: Element, index: number): Block {
       }
     });
 
+    // If headers still empty but rows exist, synthesize or use row 1
+    if (headers.length === 0 && rows.length > 0) {
+      const colCount = rows[0]?.length || 0;
+      for (let c = 0; c < colCount; c++) {
+        headers.push(`Column ${c + 1}`);
+      }
+    }
+
     const structured: TableStructured = { headers, rows };
     return {
       id,
       order: index,
       type: 'table',
       raw,
+      structured,
+    };
+  }
+
+  // 6. Code: <pre> or standalone <code> block
+  if (tagName === 'pre' || tagName === 'code') {
+    const codeEl = element.querySelector('code') || element;
+    const language = extractLanguage(element) || extractLanguage(codeEl) || 'plaintext';
+    const code = codeEl.textContent || '';
+    const structured: CodeStructured = { language, code };
+    return {
+      id,
+      order: index,
+      type: 'code',
+      raw,
+      language,
       structured,
     };
   }
@@ -162,27 +191,58 @@ function findAssistantContainer(root: ParentNode): Element {
 }
 
 /**
- * Parses an Element container into ResponseIR.
+ * Parses an Element container into ResponseIR preserving text nodes and nested elements in document order.
  */
 export function parseResponseElement(container: Element, responseId = 'resp-0'): ResponseIR {
   const blocks: Block[] = [];
-  const children = Array.from(container.children);
-
   let order = 0;
-  for (const child of children) {
-    // Skip empty script / style tags
-    const tag = child.tagName.toLowerCase();
-    if (tag === 'script' || tag === 'style') {
-      continue;
+
+  // Find inner content container (e.g. .markdown, .prose) if present
+  const contentRoot = container.querySelector('.markdown, .prose') || container;
+
+  function processNode(node: Node) {
+    // 1. Text nodes directly under the root container
+    if (node.nodeType === 3 /* Node.TEXT_NODE */) {
+      const text = node.textContent?.trim();
+      if (text) {
+        blocks.push({
+          id: `block-${order}`,
+          order: order++,
+          type: 'paragraph',
+          raw: `<p>${text}</p>`,
+          structured: { text } as ParagraphStructured,
+        });
+      }
+      return;
+    }
+
+    if (node.nodeType !== 1 /* Node.ELEMENT_NODE */) {
+      return;
+    }
+
+    const el = node as Element;
+    const tag = el.tagName.toLowerCase();
+
+    // Skip scripts, styles, and injected UI chrome
+    if (tag === 'script' || tag === 'style' || el.classList.contains('explain-aloud-btn-container')) {
+      return;
     }
 
     // Ignore whitespace-only unknown elements
-    if (!child.textContent?.trim() && !child.querySelector('img, table, pre, code')) {
-      continue;
+    if (!el.textContent?.trim() && !el.querySelector('img, table, pre, code')) {
+      return;
     }
 
-    blocks.push(parseElementToBlock(child, order++));
+    // If it's a generic div or section containing multiple semantic block children, unwrap and process children
+    if ((tag === 'div' || tag === 'section') && el.children.length > 1 && !el.querySelector(':scope > table, :scope > pre')) {
+      Array.from(el.childNodes).forEach(processNode);
+      return;
+    }
+
+    blocks.push(parseElementToBlock(el, order++));
   }
+
+  Array.from(contentRoot.childNodes).forEach(processNode);
 
   return {
     schemaVersion: '1.0',

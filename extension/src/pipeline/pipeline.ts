@@ -1,9 +1,9 @@
-import type { Block, Fact, ResponseIR } from '@/src/types/ir';
+import type { Block, Fact, ResponseIR, CodeStructured } from '@/src/types/ir';
 import type { NarrationPlan, NarrationSegment } from '@/src/types/narration';
 import { parseResponseHtml, parseResponseElement } from '@/src/parser/htmlParser';
 import { narrateBlockWithRules } from '@/src/narrator/ruleNarrator';
 import { narrateCodeBlock, narrateTableBlock, type NarrationMode } from '@/src/narrator/llmNarrator';
-import { extractTableFacts } from '@/src/table/tableEngine';
+import { extractTableFacts, generateLiteralTableSummary } from '@/src/table/tableEngine';
 import { validateNarrationPlan } from '@/src/validator/segmentValidator';
 
 export interface PipelineOptions {
@@ -24,6 +24,7 @@ export interface PipelineResult {
 
 /**
  * End-to-end pipeline: converts ResponseIR into a validated, audio-ready NarrationPlan.
+ * In Literal mode, provides deterministic offline rendering for code and tables without calling Ollama.
  */
 export async function buildNarrationPlanFromIR(
   ir: ResponseIR,
@@ -56,6 +57,22 @@ export async function buildNarrationPlanFromIR(
 
     // B. Code block generation
     if (block.type === 'code') {
+      if (mode === 'literal') {
+        const structured = block.structured as CodeStructured | undefined;
+        const code = structured?.code || block.raw;
+        const language = structured?.language || block.language || 'code';
+        rawSegments.push({
+          id: `seg-${block.id}-literal`,
+          sourceBlockIds: [block.id],
+          factIds: [],
+          provenance: 'literal',
+          text: `Code snippet in ${language}: ${code.replace(/\s+/g, ' ').trim()}`,
+          verified: true,
+          pauseAfterMs: 350,
+        });
+        continue;
+      }
+
       const codeSegments = await narrateCodeBlock(block, mode, model);
       rawSegments.push(...codeSegments);
       continue;
@@ -63,6 +80,20 @@ export async function buildNarrationPlanFromIR(
 
     // C. Table block generation
     if (block.type === 'table') {
+      if (mode === 'literal') {
+        const blockFacts = allFacts.filter((f) => f.sourceBlockIds.includes(block.id));
+        rawSegments.push({
+          id: `seg-${block.id}-literal`,
+          sourceBlockIds: [block.id],
+          factIds: blockFacts.map((f) => f.id),
+          provenance: 'literal',
+          text: generateLiteralTableSummary(block),
+          verified: true,
+          pauseAfterMs: 350,
+        });
+        continue;
+      }
+
       const tableSegments = await narrateTableBlock(block, model);
       rawSegments.push(...tableSegments);
       continue;

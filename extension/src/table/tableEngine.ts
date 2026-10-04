@@ -297,3 +297,34 @@ export function generateDeterministicTableSummary(block: Block): string {
 
   return lines.join(' ');
 }
+
+/**
+ * Deterministically renders all table cells with their headers for Literal mode.
+ * Retains all source values, rows, and identifiers without LLM rewriting.
+ */
+export function generateLiteralTableSummary(block: Block): string {
+  const structured = block.structured as TableStructured | undefined;
+  if (!structured || !structured.headers || !structured.rows || structured.rows.length === 0) {
+    return 'The table contains no data.';
+  }
+
+  const { headers, rows } = structured;
+  const entityHeader = headers[0] || 'Item';
+  const metricHeaders = headers.slice(1);
+
+  const lines: string[] = [
+    `Table with ${rows.length} rows and columns: ${headers.join(', ')}.`
+  ];
+
+  rows.forEach((row) => {
+    const entity = (row[0] || '').trim();
+    const cellReadouts = metricHeaders.map((header, idx) => {
+      const cellVal = (row[idx + 1] || 'empty').trim();
+      return `${header}: ${cellVal}`;
+    });
+    lines.push(`${entityHeader} ${entity}: ${cellReadouts.join(', ')}.`);
+  });
+
+  return lines.join(' ');
+}
+
