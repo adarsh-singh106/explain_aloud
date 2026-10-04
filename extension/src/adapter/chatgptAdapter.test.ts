@@ -113,5 +113,57 @@ describe('Milestone M7 — ChatGPT Adapter', () => {
       btn1?.click();
       expect(onExplain).toHaveBeenCalledWith(turn);
     });
+
+    // --- Audit Reproductions & Acceptance Assertions (A11) ---
+
+    it('deduplicates matches when article contains [data-message-author-role="assistant"] (A11 probe)', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <article data-testid="conversation-turn-3">
+          <div data-message-author-role="assistant" data-message-id="msg-turn-3">
+            <div class="markdown"><p>Answer 3</p></div>
+          </div>
+        </article>
+      `;
+
+      const found = findCompletedAssistantResponses(container);
+      // Must return exactly ONE canonical element, not both the article and the message div!
+      expect(found).toHaveLength(1);
+    });
+
+    it('ensures older completed turns are NOT blocked when another turn streams (A11 probe)', () => {
+      const completedTurn = document.createElement('div');
+      completedTurn.setAttribute('data-message-author-role', 'assistant');
+      completedTurn.innerHTML = '<p>Completed text</p>';
+
+      const streamingTurn = document.createElement('div');
+      streamingTurn.setAttribute('data-message-author-role', 'assistant');
+      streamingTurn.classList.add('result-streaming');
+      streamingTurn.innerHTML = '<p>Streaming text</p>';
+
+      expect(isResponseStreaming(completedTurn)).toBe(false);
+      expect(isResponseStreaming(streamingTurn)).toBe(true);
+    });
+
+    it('excludes injected Explain Aloud button from extracted ResponseIR blocks (A11 probe)', () => {
+      const turn = document.createElement('div');
+      turn.setAttribute('data-message-author-role', 'assistant');
+      turn.innerHTML = `
+        <div class="markdown">
+          <p>Real content text.</p>
+        </div>
+      `;
+
+      injectExplainAloudButton(turn, () => {});
+
+      const ir = extractResponseIRFromElement(turn);
+      expect(ir.blocks).toHaveLength(1);
+      expect(ir.blocks[0]?.type).toBe('paragraph');
+      // The button text "Explain Aloud" must NOT be parsed into ResponseIR!
+      for (const b of ir.blocks) {
+        expect(b.raw).not.toContain('Explain Aloud');
+      }
+    });
   });
 });
+

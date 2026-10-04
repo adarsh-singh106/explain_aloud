@@ -3,14 +3,16 @@ import { parseResponseElement } from '@/src/parser/htmlParser';
 
 export const CHATGPT_ASSISTANT_SELECTOR = [
   '[data-message-author-role="assistant"]',
-  'article[data-testid^="conversation-turn-"]:has([data-message-author-role="assistant"])',
+  'article[data-testid^="conversation-turn-"]',
   '[data-fixture="assistant-response"]',
 ].join(', ');
 
 export const MARKDOWN_CONTAINER_SELECTOR = '.markdown, .prose';
 
 /**
- * Checks if a ChatGPT response is still actively streaming.
+ * Checks if a specific ChatGPT response is still actively streaming.
+ * Checks per-turn attributes and classes rather than page-global buttons,
+ * so older completed answers are not blocked by a new streaming turn.
  */
 export function isResponseStreaming(responseEl: Element): boolean {
   if (responseEl.classList.contains('result-streaming')) {
@@ -19,10 +21,10 @@ export function isResponseStreaming(responseEl: Element): boolean {
   if (responseEl.querySelector('.result-streaming')) {
     return true;
   }
-  // Check global stop button in ChatGPT DOM
-  const root = responseEl.ownerDocument || document;
-  const stopBtn = root.querySelector('button[data-testid="stop-button"], button[aria-label="Stop generating"]');
-  return stopBtn !== null;
+  if (responseEl.getAttribute('data-is-streaming') === 'true') {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -30,7 +32,10 @@ export function isResponseStreaming(responseEl: Element): boolean {
  */
 export function extractResponseContentElement(responseEl: Element): Element {
   // If the element itself is the fixture or markdown container
-  if (responseEl.matches?.(MARKDOWN_CONTAINER_SELECTOR) || responseEl.getAttribute('data-fixture') === 'assistant-response') {
+  if (
+    responseEl.matches?.(MARKDOWN_CONTAINER_SELECTOR) ||
+    responseEl.getAttribute('data-fixture') === 'assistant-response'
+  ) {
     return responseEl;
   }
 
@@ -46,14 +51,35 @@ export function extractResponseContentElement(responseEl: Element): Element {
 
 /**
  * Finds all completed assistant response elements on the page.
+ * Canonicalizes matches to one element per response turn without duplicates.
  */
 export function findCompletedAssistantResponses(root: Document | Element = document): Element[] {
-  const elements = Array.from(root.querySelectorAll(CHATGPT_ASSISTANT_SELECTOR));
+  // First, find all explicit assistant message author nodes
+  const messageNodes = Array.from(root.querySelectorAll('[data-message-author-role="assistant"]'));
 
-  return elements.filter((el) => {
-    // Only completed responses
-    return !isResponseStreaming(el);
-  });
+  let candidateElements: Element[] = [];
+  if (messageNodes.length > 0) {
+    candidateElements = messageNodes;
+  } else {
+    // Fall back to conversation turn articles or fixtures
+    candidateElements = Array.from(
+      root.querySelectorAll('[data-fixture="assistant-response"], article[data-testid^="conversation-turn-"]')
+    );
+  }
+
+  // Filter out any element that is an ancestor or descendant of another in candidate list
+  const canonical: Element[] = [];
+  for (const el of candidateElements) {
+    // If it's an article that contains a message-author-role child, prefer the inner message container
+    const innerAssistant = el.querySelector('[data-message-author-role="assistant"]');
+    const target = innerAssistant || el;
+
+    if (!canonical.includes(target) && !isResponseStreaming(target)) {
+      canonical.push(target);
+    }
+  }
+
+  return canonical;
 }
 
 /**
@@ -85,12 +111,13 @@ export function injectExplainAloudButton(
   onExplain: (turnEl: Element) => void
 ): HTMLElement | null {
   // Prevent duplicate injection
-  if (turnEl.querySelector('.explain-aloud-action-btn')) {
+  if (turnEl.querySelector('.explain-aloud-action-btn') || turnEl.closest('.explain-aloud-btn-container')) {
     return null;
   }
 
-  // Find action bar area (usually sibling of message or inside turn actions)
-  const actionContainer = turnEl.querySelector('.empty\\:hidden, [class*="action"], [class*="button"]') || turnEl;
+  // Create container with class explain-aloud-btn-container so parser ignores it
+  const container = document.createElement('div');
+  container.className = 'explain-aloud-btn-container';
 
   const btn = document.createElement('button');
   btn.className = 'explain-aloud-action-btn';
@@ -120,9 +147,22 @@ export function injectExplainAloudButton(
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isResponseStreaming(turnEl)) {
+      alert('Please wait until this response finishes streaming.');
+      return;
+    }
     onExplain(turnEl);
   });
 
-  actionContainer.appendChild(btn);
+  container.appendChild(btn);
+
+  // Find action bar area (usually sibling of message or inside turn actions)
+  const actionContainer = turnEl.querySelector('.empty\\:hidden, [class*="action"], [class*="button"]');
+  if (actionContainer && actionContainer !== turnEl) {
+    actionContainer.appendChild(container);
+  } else {
+    turnEl.appendChild(container);
+  }
+
   return btn;
 }

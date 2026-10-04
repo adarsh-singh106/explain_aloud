@@ -12,17 +12,18 @@ export default defineContentScript({
     function scanAndAttachButtons() {
       const responses = findCompletedAssistantResponses();
       responses.forEach((respEl) => {
-        injectExplainAloudButton(respEl, (targetEl) => {
+        injectExplainAloudButton(respEl, async (targetEl) => {
           const ir = extractResponseIRFromElement(targetEl);
-          console.log('[Explain Aloud] Extracted ResponseIR for selected message:', ir);
+          console.log('[Explain Aloud] Extracted ResponseIR for selected turn:', ir.responseId);
 
-          // Broadcast to extension runtime (background / popup)
-          browser.runtime.sendMessage({
-            type: 'EXPLAIN_ALOUD_EXTRACTED',
-            ir,
-          }).catch(() => {
-            // Popup or background may not have open listener yet
-          });
+          try {
+            await browser.runtime.sendMessage({
+              type: 'EXPLAIN_ALOUD_EXTRACTED',
+              ir,
+            });
+          } catch (err) {
+            console.warn('[Explain Aloud] Message send failed:', err);
+          }
         });
       });
     }
@@ -30,14 +31,20 @@ export default defineContentScript({
     // Initial scan
     scanAndAttachButtons();
 
-    // Observe DOM mutations to attach buttons to new assistant responses as they complete
+    // Observe DOM mutations to attach buttons to new completed assistant responses
+    let debounceTimer: any = null;
     const observer = new MutationObserver(() => {
-      scanAndAttachButtons();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        scanAndAttachButtons();
+      }, 250);
     });
 
     observer.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'data-is-streaming'],
     });
   },
 });

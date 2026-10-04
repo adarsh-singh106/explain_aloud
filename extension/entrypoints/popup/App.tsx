@@ -1,14 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { checkOllamaServer } from '@/src/services/ollama';
-import { executePipelineFromHtml, type PipelineResult } from '@/src/pipeline/pipeline';
+import { checkOllamaServer, isModelAvailable } from '@/src/services/ollama';
+import {
+  executePipelineFromHtml,
+  buildNarrationPlanFromIR,
+  type PipelineResult,
+} from '@/src/pipeline/pipeline';
 import { MIXED_RESPONSE_FIXTURE_HTML } from '@/src/pipeline/fixtureData';
 import { AudioQueue, type AudioQueueState } from '@/src/audio/audioQueue';
 import type { NarrationMode } from '@/src/narrator/llmNarrator';
 import type { NarrationSegment } from '@/src/types/narration';
+import type { ResponseIR } from '@/src/types/ir';
 
 export default function App() {
-  const [ollamaOnline, setOllamaOnline] = useState<boolean | null>(null);
+  const [statusText, setStatusText] = useState('Checking Ollama...');
+  const [statusClass, setStatusClass] = useState<'online' | 'offline' | 'checking'>('checking');
   const [mode, setMode] = useState<NarrationMode>('natural');
   const [loading, setLoading] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
@@ -18,9 +24,60 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const audioQueueRef = useRef<AudioQueue | null>(null);
+  const activeIRRef = useRef<ResponseIR | null>(null);
+
+  const runPipelineOnIR = async (ir: ResponseIR, targetMode: NarrationMode) => {
+    setLoading(true);
+    setErrorMessage(null);
+    audioQueueRef.current?.cancel();
+
+    try {
+      const result = await buildNarrationPlanFromIR(ir, {
+        mode: targetMode,
+        responseId: ir.responseId,
+      });
+
+      setPipelineResult(result);
+      audioQueueRef.current?.loadPlan(result.plan);
+      setCurrentSegmentIndex(0);
+      setCurrentSegment(result.plan.segments[0] || null);
+
+      // Auto-start playback on newly extracted response
+      await audioQueueRef.current?.play();
+    } catch (err: any) {
+      console.error('Pipeline error:', err);
+      setErrorMessage(`Pipeline Error: ${err.message || String(err)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    checkOllamaServer().then((online) => setOllamaOnline(online));
+    // Check model presence truthfully (A15)
+    async function checkModelStatus() {
+      const online = await checkOllamaServer();
+      if (!online) {
+        setStatusText('Ollama Offline');
+        setStatusClass('offline');
+        return;
+      }
+      const hasE4B = await isModelAvailable('gemma4:e4b');
+      if (hasE4B) {
+        setStatusText('Gemma 4 (E4B) Ready');
+        setStatusClass('online');
+        return;
+      }
+      const hasE2B = await isModelAvailable('gemma4:e2b');
+      if (hasE2B) {
+        setStatusText('Gemma 4 (E2B) Ready');
+        setStatusClass('online');
+        return;
+      }
+      setStatusText('Ollama Online (No Gemma 4)');
+      setStatusClass('offline');
+    }
+
+    checkModelStatus();
 
     // Initialize AudioQueue
     const queue = new AudioQueue({
@@ -39,22 +96,44 @@ export default function App() {
 
     audioQueueRef.current = queue;
 
+    // Check if background service worker has an active extracted turn from ChatGPT (A04)
+    browser.runtime.sendMessage({ type: 'GET_CURRENT_SESSION' })
+      .then((res: any) => {
+        if (res?.ir) {
+          activeIRRef.current = res.ir;
+          runPipelineOnIR(res.ir, mode);
+        }
+      })
+      .catch(() => {});
+
+    // Listen for live turn selection events
+    const handleMessage = (msg: any) => {
+      if ((msg?.type === 'EXPLAIN_ALOUD_EXTRACTED' || msg?.type === 'EXPLAIN_ALOUD_SESSION_UPDATED') && msg.ir) {
+        activeIRRef.current = msg.ir;
+        runPipelineOnIR(msg.ir, mode);
+      }
+    };
+
+    browser.runtime.onMessage.addListener(handleMessage);
+
     return () => {
+      browser.runtime.onMessage.removeListener(handleMessage);
       queue.cancel();
     };
   }, []);
 
-  const handleGeneratePlan = async () => {
+  const handleLoadFixture = async (targetMode = mode) => {
     setLoading(true);
     setErrorMessage(null);
     audioQueueRef.current?.cancel();
 
     try {
       const result = await executePipelineFromHtml(MIXED_RESPONSE_FIXTURE_HTML, {
-        mode,
+        mode: targetMode,
         responseId: `fixture-${Date.now()}`,
       });
 
+      activeIRRef.current = result.ir;
       setPipelineResult(result);
       audioQueueRef.current?.loadPlan(result.plan);
       setCurrentSegmentIndex(0);
@@ -67,9 +146,19 @@ export default function App() {
     }
   };
 
+  const handleModeToggle = async (newMode: NarrationMode) => {
+    if (newMode === mode) return;
+    setMode(newMode);
+    if (activeIRRef.current) {
+      await runPipelineOnIR(activeIRRef.current, newMode);
+    } else if (pipelineResult) {
+      await handleLoadFixture(newMode);
+    }
+  };
+
   const handlePlay = async () => {
     if (!pipelineResult) {
-      await handleGeneratePlan();
+      await handleLoadFixture();
     }
     audioQueueRef.current?.play();
   };
@@ -93,14 +182,14 @@ export default function App() {
       {/* Header */}
       <header className="popup-header">
         <div className="brand">
-          <svg className="brand-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg className="brand-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
           </svg>
           <h2>Explain Aloud</h2>
         </div>
-        <span className={`status-pill ${ollamaOnline ? 'online' : 'offline'}`}>
-          Ollama: {ollamaOnline === null ? '...' : ollamaOnline ? 'Gemma 4 Ready' : 'Offline'}
+        <span className={`status-pill ${statusClass}`}>
+          {statusText}
         </span>
       </header>
 
@@ -108,28 +197,37 @@ export default function App() {
       <div className="mode-toggle-group">
         <button
           className={`mode-btn ${mode === 'natural' ? 'active' : ''}`}
-          onClick={() => setMode('natural')}
+          onClick={() => handleModeToggle('natural')}
+          aria-pressed={mode === 'natural'}
         >
           Natural Mode
         </button>
         <button
           className={`mode-btn ${mode === 'literal' ? 'active' : ''}`}
-          onClick={() => setMode('literal')}
+          onClick={() => handleModeToggle('literal')}
+          aria-pressed={mode === 'literal'}
         >
           Literal Mode
         </button>
       </div>
 
-      {/* Primary Action Button */}
+      {/* Action Area */}
       <div className="action-row">
         <button
-          className="btn primary-action-btn"
-          onClick={handleGeneratePlan}
+          className="btn demo-fixture-btn"
+          onClick={() => handleLoadFixture(mode)}
           disabled={loading}
         >
-          {loading ? 'Analyzing & Narrating...' : 'Load & Narrate Fixture'}
+          {loading ? 'Analyzing & Narrating...' : 'Demo: Load Mixed Response Fixture'}
         </button>
       </div>
+
+      {pipelineResult && (
+        <div className="source-info-bar">
+          <span className="source-id-label">Source: <strong>{pipelineResult.ir.responseId}</strong></span>
+          <span className="block-count-label">{pipelineResult.ir.blocks.length} blocks detected</span>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="error-banner">{errorMessage}</div>
@@ -138,13 +236,13 @@ export default function App() {
       {/* Playback Controls */}
       {pipelineResult && (
         <section className="playback-panel">
-          <div className="playback-controls">
+          <div className="controls-row">
             {playbackState === 'playing' ? (
-              <button className="ctrl-btn pause" onClick={handlePause} title="Pause">
+              <button className="ctrl-btn pause" onClick={handlePause} title="Pause playback">
                 ⏸ Pause
               </button>
             ) : (
-              <button className="ctrl-btn play" onClick={handlePlay} title="Play">
+              <button className="ctrl-btn play" onClick={handlePlay} title="Start / Resume playback">
                 ▶ Play
               </button>
             )}
@@ -169,7 +267,13 @@ export default function App() {
                 <span className={`provenance-badge ${currentSegment.provenance}`}>
                   {currentSegment.provenance.toUpperCase()}
                 </span>
-                <span className="verified-badge">✓ Verified</span>
+                {currentSegment.fallbackReason ? (
+                  <span className="fallback-badge" title={currentSegment.fallbackReason}>⚠️ Fallback</span>
+                ) : currentSegment.verified ? (
+                  <span className="verified-badge">✓ Verified</span>
+                ) : (
+                  <span className="unverified-badge">⚠️ Unverified</span>
+                )}
               </div>
               <p className="active-segment-text">"{currentSegment.text}"</p>
             </div>
