@@ -39,9 +39,9 @@
 | **Heading** | "Heading two: Choosing a model." | *"Choosing a model."* (Opening) / *"Next, choosing a model."* (Transition) |
 | **Prose** | Pronounces text verbatim, including visual artifacts like "as shown below". | Direct spoken prose with all visual-only artifacts (*"as shown above/below"*) scrubbed. |
 | **List** | "Bullet. Accuracy matters for final predictions. Bullet. Latency matters..." | Natural group pacing: *"Accuracy matters for final predictions. Latency matters for interactive use. Finally, the best choice depends on the product constraint."* |
-| **Code** | "for user in users colon newline if user dot active colon newline send underscore email open paren user close paren" | **Natural Mode**: *"This Python snippet iterates through each user and sends an email if the user is currently active."*<br>**Literal Mode**: *"Python code: for user in users, if user is active, call send_email with user."* |
-| **Table** | Cell-by-cell robotic read: "Table with 3 rows. Model, Accuracy, Latency. A, 92 percent, 4 sec. B, 88 percent, 1 sec. C, 90 percent, 2 sec." | **Deterministic Semantic Narration**: *"The table compares 3 models across Accuracy and Latency. For accuracy, Model A is highest at 92%, while Model B is lowest at 88%. For latency, Model A has the highest latency at 4 seconds, whereas Model B is fastest at 1 second."* |
-| **Safety** | If an LLM hallucinates an invalid metric (e.g. 99%), standard tools read the hallucination. | **Validator & Fallback**: Catches unsupported numbers, reversed comparisons, or hallucinations, and replaces the segment with a 100% verified deterministic summary without interrupting playback. |
+| **Code** | "for user in users colon newline if user dot active colon newline send underscore email open paren user close paren" | **Natural Mode**: *"This Python snippet iterates through each user and sends an email if the user is currently active."*<br>**Literal Mode**: *"Code snippet in python: for user in users: if user.active: send_email(user)"* (100% deterministic, offline) |
+| **Table** | Cell-by-cell robotic read: "Table with 3 rows. Model, Accuracy, Latency. A, 92 percent, 4 sec. B, 88 percent, 1 sec. C, 90 percent, 2 sec." | **Deterministic Semantic Narration**: *"The table compares 3 models across Accuracy and Latency. For accuracy, Model A is highest at 92%, while Model B is lowest at 88%. For latency, Model A has the highest latency at 4 sec, while Model B is lowest at 1 sec. Model C has Accuracy 90%, Latency 2 sec."* (Zero dropped rows) |
+| **Safety & Truth** | If an LLM hallucinates an invalid metric (e.g. 99%) or invents behavior, standard tools read the hallucination. | **Strict Validator & Fallback**: Catches unsupported numbers, reversed comparisons, entity misattributions, or ungrounded code claims, and produces a source-derived fallback without interrupting playback. |
 
 ---
 
@@ -53,14 +53,12 @@ Ensure Ollama is running with CORS enabled for browser extensions:
 $env:OLLAMA_ORIGINS="chrome-extension://*"
 ollama serve
 ```
-Model used: `gemma4:e4b` (verified and pulled).
+Model used: `gemma4:e4b` (with automatic fallback to `gemma4:e2b`).
 
-### Step 2: Build or Run the Extension
-From repo root:
+### Step 2: Build the Extension
 ```powershell
 cd extension
-npm run dev
-# OR for production build:
+npm run compile
 npm run build
 ```
 
@@ -70,25 +68,28 @@ npm run build
 3. Click **Load unpacked**.
 4. Select the `.output/chrome-mv3` folder inside `explain_aloud/extension/`.
 
-### Step 4: Run the Demo
-1. Click the **Explain Aloud** puzzle icon in the Chrome toolbar.
-2. Select **Natural Mode** or **Literal Mode**.
-3. Click **Load & Narrate Fixture**.
-4. Watch the pipeline parse all blocks, extract table facts, generate narration, validate every claim, and stream local Kokoro-82M speech.
-5. Test playback controls: **Play**, **Pause**, **Skip**, and **Cancel**.
+### Step 4: Run the Demo in Popup or Persistent Side Panel
+1. Click the **Explain Aloud** icon in the Chrome toolbar.
+2. The player opens in a dedicated Side Panel alongside the browser page (or popup).
+3. Observe the live truthful status badge (e.g. `Gemma 4 (E4B) Ready`).
+4. Select **Natural Mode** or **Literal Mode**.
+5. Click **Demo: Load Mixed Response Fixture**.
+6. Watch the pipeline parse all blocks, extract table facts, generate narration, validate every claim, and stream local Kokoro-82M speech.
+7. Test playback controls: **Play**, **Pause**, **Skip**, and **Cancel**. Notice how pause, skip, and cancel respond instantly without race conditions.
 
 ### Step 5: Test on ChatGPT (Live)
 1. Open [ChatGPT](https://chatgpt.com).
 2. Ask any prompt that produces a mixed response (code + table + explanation).
 3. As soon as the response finishes generating, observe the **Explain Aloud** action button injected into the turn footer.
-4. Click it to listen to the explanation.
+4. Click it to listen to that exact selected response. The Side Panel opens and begins audio explanation immediately.
+5. While one response plays, older answers remain independently playable and are never blocked by newly streaming turns.
 
 ---
 
 ## 4. Honest Limitations (MVP Scope)
 
-Per [docs/MVP.md](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/docs/MVP.md) and [docs/PRD.md](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/docs/PRD.md):
+Per [docs/MVP.md](docs/MVP.md) and [docs/PRD.md](docs/PRD.md):
 1. **Target Site**: Focused exclusively on ChatGPT completed responses for MVP. Claude, Gemini, and general webpages are planned for subsequent milestones.
 2. **Unsupported Block Types**: Complex math equations (LaTeX), charts (SVG/canvas), and Mermaid diagrams fall back to literal or summary descriptions.
-3. **Local Hardware Dependency**: Local LLM speed is bounded by the host GPU/CPU running Ollama. If Ollama takes too long or is busy, Explain Aloud falls back gracefully to rule-based deterministic summaries.
+3. **Local Hardware Dependency**: Local LLM speed is bounded by the host GPU/CPU running Ollama. If Ollama takes too long (>8s deadline), Explain Aloud falls back gracefully to rule-based deterministic summaries.
 4. **Voice Profile**: Uses local Kokoro-82M (`af_heart`) running entirely in WebAssembly/WebGPU. No cloud TTS API is used.
