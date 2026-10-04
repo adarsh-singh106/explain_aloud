@@ -73,23 +73,29 @@ export function validateSegment(
     const compFacts = facts.filter((f) => f.kind === 'comparison');
     for (const comp of compFacts) {
       const { metric, highest, lowest } = comp.value as any;
-      const lowerText = segment.text.toLowerCase();
       const metricLower = metric.toLowerCase();
 
-      // If discussing this metric
-      if (lowerText.includes(metricLower)) {
-        // Reversed superlative checks
+      // Split into clauses to prevent cross-clause entity misattribution
+      const clauses = segment.text.split(/(?:[.;]|,\s*(?:but|while|whereas|and)\s*|\b(?:but|while|whereas)\b)/i);
+
+      for (const clause of clauses) {
+        const lowerClause = clause.toLowerCase();
+        if (!lowerClause.includes(metricLower)) continue;
+
+        // Check if lowest entity is falsely claimed to be highest/best for this metric
         const lowestClaimsHighest = new RegExp(
-          `\\b${lowest.entity}\\b[^.]*\\b(?:highest|best|greatest|most)\\b[^.]*\\b${metricLower}\\b`,
+          `\\b${lowest.entity}\\b[^,;]*\\b(?:highest|best|greatest|most)\\b`,
           'i'
         );
+        // Check if highest entity is falsely claimed to be lowest/worst for this metric
         const highestClaimsLowest = new RegExp(
-          `\\b${highest.entity}\\b[^.]*\\b(?:lowest|worst|least|slowest)\\b[^.]*\\b${metricLower}\\b`,
+          `\\b${highest.entity}\\b[^,;]*\\b(?:lowest|worst|least|slowest)\\b`,
           'i'
         );
 
-        if (lowestClaimsHighest.test(segment.text) || highestClaimsLowest.test(segment.text)) {
+        if (lowestClaimsHighest.test(clause) || highestClaimsLowest.test(clause)) {
           reasons.push(`reversed_comparison:${metric}`);
+          break;
         }
       }
     }

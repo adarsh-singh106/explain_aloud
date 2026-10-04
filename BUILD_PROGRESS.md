@@ -1,11 +1,11 @@
 # Explain Aloud — Comprehensive Build & Progress Report
 
 **Generated:** 2026-10-04  
-**Current Milestone Completed:** M5 (Validator & Fallback Engine)  
-**Current Git Branch:** `feat/validator`  
-**Overall Test Suite Status:** 43 tests passed across 7 test files (100% pass rate)  
+**Current Milestone Completed:** M6 (Audio & End-to-End Fixture Pipeline)  
+**Current Git Branch:** `feat/audio-pipeline`  
+**Overall Test Suite Status:** 50 tests passed across 9 test files (100% pass rate)  
 **TypeScript Typecheck:** 0 errors (`tsc --noEmit`)  
-**WXT Build:** Clean production bundle (~810ms build time)  
+**WXT Build:** Clean production bundle (~760ms build time)  
 
 ---
 
@@ -157,22 +157,42 @@ To protect `main` as a clean, deployable baseline and isolate each milestone for
 
 ---
 
+### Milestone M6 — Audio Pipeline & End-to-End Fixture (`feat/audio-pipeline`)
+- **Audio Queue Controller** ([`extension/src/audio/audioQueue.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/src/audio/audioQueue.ts)):
+  - State machine: `idle` | `playing` | `paused` | `stopped` | `error`.
+  - Immediate controls: `play()`, `pause()`, `skip()`, `cancel()`.
+  - Pre-fetches subsequent segment audio synthesis in the background to ensure low latency between segments (target ≤ 1s).
+  - Pacing: Respects `segment.pauseAfterMs` between segments.
+  - Event hooks: `onSegmentStart`, `onSegmentEnd`, `onStateChange`, `onError`.
+  - Standard browser playback adapter (`BrowserAudioPlayer`) using HTMLAudioElement and ObjectURLs.
+- **End-to-End Pipeline Orchestrator** ([`extension/src/pipeline/pipeline.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/src/pipeline/pipeline.ts)):
+  - Integrates the full system:
+    `fixture / DOM Element` → `ResponseIR` → `rule/LLM narration` → `validator` → `NarrationPlan` → `AudioQueue`.
+  - `executePipelineFromHtml` and `executePipelineFromElement`.
+- **Unit & Integration Tests**:
+  - [`extension/src/audio/audioQueue.test.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/src/audio/audioQueue.test.ts): 5 tests verifying queue state lifecycle, pause/resume, skip, and cancellation.
+  - [`extension/src/pipeline/pipeline.test.ts`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/extension/src/pipeline/pipeline.test.ts): 2 integration tests verifying end-to-end execution on [`fixtures/mixed-response.html`](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/fixtures/mixed-response.html) in Natural mode, source coverage invariants, and simulated hallucination fallback handling.
+
+---
+
 ## 4. Complete Test Results
 
-All test suites execute via Vitest with Happy-DOM in under 1 second:
+All test suites execute via Vitest with Happy-DOM in ~1.2 seconds:
 
 ```text
- ✓ src/table/tableEngine.test.ts (8 tests) 9ms
+ ✓ src/narrator/ruleNarrator.test.ts (10 tests) 15ms
  ✓ src/smoke.test.ts (1 test) 4ms
- ✓ src/narrator/ruleNarrator.test.ts (10 tests) 10ms
- ✓ src/parser/htmlParser.test.ts (7 tests) 24ms
- ✓ src/validator/segmentValidator.test.ts (6 tests) 12ms
- ✓ src/narrator/llmNarrator.test.ts (10 tests) 12ms
+ ✓ src/table/tableEngine.test.ts (8 tests) 10ms
+ ✓ src/validator/segmentValidator.test.ts (6 tests) 15ms
+ ✓ src/parser/htmlParser.test.ts (7 tests) 37ms
+ ✓ src/narrator/llmNarrator.test.ts (10 tests) 19ms
+ ✓ src/pipeline/pipeline.test.ts (2 tests) 44ms
  ✓ src/kokoro.test.ts (1 test) 3ms
+ ✓ src/audio/audioQueue.test.ts (5 tests) 80ms
 
- Test Files  7 passed (7)
-      Tests  43 passed (43)
-   Duration  966ms
+ Test Files  9 passed (9)
+      Tests  50 passed (50)
+   Duration  1.20s
 ```
 
 ---
@@ -180,6 +200,8 @@ All test suites execute via Vitest with Happy-DOM in under 1 second:
 ## 5. Git Commit History
 
 ```text
+* (current) feat/audio-pipeline
+* 144688e docs: document full build progress across milestones M0 through M5
 * 9779654 feat: validator and deterministic fallback engine for narration segments (feat/validator)
 * f57a4e3 feat: LLM narrator for code and table blocks with structured JSON and fallback (feat/llm-narrator)
 * bef7ef8 feat: deterministic table fact extraction and fallback engine (feat/table-engine)
@@ -195,7 +217,6 @@ All test suites execute via Vitest with Happy-DOM in under 1 second:
 ## 6. Remaining Milestones to MVP
 
 According to [docs/BUILD_PLAN.md](file:///C:/Users/adars/Desktop/One%20ML/Hacktoberfest/Week%200/explain_aloud/docs/BUILD_PLAN.md):
-- **M6 — Audio Pipeline**: Segment queue controller + Kokoro synthesis + playback controls (`play`, `pause`, `skip`, `cancel`) + End-to-end fixture execution (`fixtures/mixed-response.html` → audio).
 - **M7 — ChatGPT Adapter**: Content script DOM observer that extracts completed assistant responses directly from ChatGPT web interface.
 - **M8 — UI / Side Panel**: Floating "Explain Aloud" action button, side panel drawer, Natural vs. Literal mode toggle, and debug view showing block extraction and validation status.
 - **M9 — Demo & Submission**: Curated demo recording comparing native screen-reader Read Aloud against Explain Aloud, documentation, and final acceptance checks.
