@@ -1,0 +1,23 @@
+export const MIXED_RESPONSE_FIXTURE_HTML = `
+<article data-fixture="assistant-response">
+  <h2>Choosing a model</h2>
+  <p>Suppose we need to choose between accuracy and latency for a small API.</p>
+  <ul>
+    <li>Accuracy matters for final predictions.</li>
+    <li>Latency matters for interactive use.</li>
+    <li>The best choice depends on the product constraint.</li>
+  </ul>
+  <pre><code class="language-python">for user in users:
+    if user.active:
+        send_email(user)</code></pre>
+  <table>
+    <thead><tr><th>Model</th><th>Accuracy</th><th>Latency</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>92%</td><td>4 sec</td></tr>
+      <tr><td>B</td><td>88%</td><td>1 sec</td></tr>
+      <tr><td>C</td><td>90%</td><td>2 sec</td></tr>
+    </tbody>
+  </table>
+  <p>For an interactive product, the tradeoff between speed and accuracy should be explicit.</p>
+</article>
+`.trim();
