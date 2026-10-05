@@ -17,3 +17,20 @@ To strengthen your submission, take screenshots of:
 - The output of `npx -y entire-cli status` showing the active gemini agent and tracking status.
 - The output of `npx -y entire-cli explain` displaying the context of a tracked session.
 - The Git history or shadow branches reflecting the checkpoints created by Entire.
+
+## Final CI Review Evidence
+
+- GitHub Actions CI completed successfully.
+- 191 tests passed across 14 test files.
+- TypeScript compilation passed.
+- Production Chrome extension build passed.
+- Codex independently reviewed the CI workflow.
+- The review found no shipping blockers.
+- The only non-blocking recommendation was:
+
+  ```yaml
+  permissions:
+    contents: read
+  ```
+
+- That least-privilege hardening was subsequently applied.
