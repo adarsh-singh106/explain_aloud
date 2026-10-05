@@ -1,4 +1,6 @@
-import { KokoroTTS } from 'kokoro-js';
+import { KokoroTTS, env } from 'kokoro-js';
+import ortModuleUrl from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs?url';
+import ortWasmUrl from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm?url';
 
 let ttsInstance: KokoroTTS | null = null;
 let ttsInitPromise: Promise<KokoroTTS> | null = null;
@@ -13,6 +15,12 @@ export async function getKokoroInstance(): Promise<KokoroTTS> {
   }
 
   if (!ttsInitPromise) {
+    // MV3 cannot import remote executable code. Bundle both matching runtime
+    // assets and override the Transformers.js CDN default before model loading.
+    env.wasmPaths = {
+      mjs: new URL(ortModuleUrl, globalThis.location.href).href,
+      wasm: new URL(ortWasmUrl, globalThis.location.href).href,
+    };
     ttsInitPromise = KokoroTTS.from_pretrained(
       'onnx-community/Kokoro-82M-v1.0-ONNX',
       {
