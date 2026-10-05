@@ -1,5 +1,7 @@
 # Explain Aloud: If the Screen Disappears, Does the Answer Still Make Sense?
 
+*This is a submission for the [Hacktoberfest Weekend Challenge: Build for a Friend](https://dev.to/challenges/hacktoberfest-weekend-2026-10-01)*
+
 My girlfriend already has a listening workflow. She uses Read Aloud in both ChatGPT and Claude while doing other things — cooking, commuting, winding down after a long day. It works fine for ordinary prose. Then ChatGPT answers a question with a table, or a code block, or a bulleted list with sub-items, and the whole thing falls apart. A three-column table about people, ages, and roles starts sounding like a leaderboard. A Python snippet becomes a stream of colons and underscores. A heading that says "Next Steps" arrives as "Next, small List."
 
 She would skip those answers, or glance at her phone to reconstruct the layout, which defeats the point entirely.
