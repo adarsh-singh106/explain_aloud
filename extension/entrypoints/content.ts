@@ -13,6 +13,7 @@ export default defineContentScript({
       const responses = findCompletedAssistantResponses();
       responses.forEach((respEl) => {
         injectExplainAloudButton(respEl, async (targetEl) => {
+          const clickedAt = performance.timeOrigin + performance.now();
           const ir = extractResponseIRFromElement(targetEl);
           console.log('[Explain Aloud] Extracted ResponseIR for selected turn:', ir.responseId);
 
@@ -20,6 +21,7 @@ export default defineContentScript({
             await browser.runtime.sendMessage({
               type: 'EXPLAIN_ALOUD_EXTRACTED',
               ir,
+              clickedAt,
             });
           } catch (err) {
             console.warn('[Explain Aloud] Message send failed:', err);

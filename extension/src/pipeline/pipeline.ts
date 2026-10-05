@@ -5,6 +5,7 @@ import { narrateBlockWithRules, formatLiteralCode } from '@/src/narrator/ruleNar
 import { narrateCodeBlock, narrateTableBlock, type NarrationMode } from '@/src/narrator/llmNarrator';
 import { extractTableFacts, generateLiteralTableSummary } from '@/src/table/tableEngine';
 import { validateNarrationPlan } from '@/src/validator/segmentValidator';
+import { measureSync, reportTiming } from '@/src/services/timing';
 
 export interface PipelineOptions {
   mode?: NarrationMode;
@@ -30,6 +31,7 @@ export async function buildNarrationPlanFromIR(
   ir: ResponseIR,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
+  const constructionStarted = performance.now();
   const mode = options.mode || 'natural';
   const model = options.model || 'gemma4:e4b';
 
@@ -121,12 +123,13 @@ export async function buildNarrationPlanFromIR(
   };
 
   // 4. Validate and apply safe fallbacks
-  const { plan: validatedPlan, passedCount, fallbackCount } = validateNarrationPlan(
+  reportTiming('narration-plan construction (includes Gemma; excludes validation)', constructionStarted);
+  const { plan: validatedPlan, passedCount, fallbackCount } = measureSync('validation', () => validateNarrationPlan(
     candidatePlan,
     ir.blocks,
     allFacts,
     mode
-  );
+  ));
 
   return {
     ir,
@@ -146,7 +149,7 @@ export async function executePipelineFromHtml(
   html: string,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
-  const ir = parseResponseHtml(html, options.responseId || 'resp-fixture');
+  const ir = measureSync('extraction', () => parseResponseHtml(html, options.responseId || 'resp-fixture'));
   return buildNarrationPlanFromIR(ir, options);
 }
 
@@ -157,6 +160,6 @@ export async function executePipelineFromElement(
   container: Element,
   options: PipelineOptions = {}
 ): Promise<PipelineResult> {
-  const ir = parseResponseElement(container, options.responseId || 'resp-element');
+  const ir = measureSync('extraction', () => parseResponseElement(container, options.responseId || 'resp-element'));
   return buildNarrationPlanFromIR(ir, options);
 }

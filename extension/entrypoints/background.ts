@@ -1,6 +1,7 @@
 import type { ResponseIR } from '@/src/types/ir';
 
 let currentSessionIR: ResponseIR | null = null;
+let currentClickedAt: number | undefined;
 
 export default defineBackground(() => {
   console.log('[Explain Aloud] Background service worker initialized.');
@@ -17,6 +18,7 @@ export default defineBackground(() => {
 
     if (message.type === 'EXPLAIN_ALOUD_EXTRACTED') {
       currentSessionIR = message.ir;
+      currentClickedAt = message.clickedAt;
       console.log('[Explain Aloud] Stored extracted ResponseIR:', currentSessionIR?.responseId);
 
       // Open side panel for the sender tab if available
@@ -31,6 +33,7 @@ export default defineBackground(() => {
       browser.runtime.sendMessage({
         type: 'EXPLAIN_ALOUD_SESSION_UPDATED',
         ir: currentSessionIR,
+        clickedAt: currentClickedAt,
       }).catch(() => {
         // No listener currently active
       });
@@ -40,7 +43,7 @@ export default defineBackground(() => {
     }
 
     if (message.type === 'GET_CURRENT_SESSION') {
-      sendResponse({ ir: currentSessionIR });
+      sendResponse({ ir: currentSessionIR, clickedAt: currentClickedAt });
       return true;
     }
 

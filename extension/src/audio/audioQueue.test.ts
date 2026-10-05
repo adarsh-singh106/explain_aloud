@@ -95,6 +95,30 @@ describe('Milestone M6 — AudioQueue Controller', () => {
     expect(onStart).toHaveBeenCalledWith(dummyPlan.segments[0], 0);
   });
 
+  it('reports first audio only after playback starts, once per selected response', async () => {
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {});
+    let started!: () => void;
+    const player = new MockAudioPlayer();
+    vi.spyOn(player, 'playBlob').mockImplementationOnce(() => new Promise<void>(resolve => { started = resolve; }));
+    const queue = new AudioQueue({ player, synthesizer: async () => new Blob(['audio']) });
+    try {
+      queue.loadPlan(dummyPlan, performance.timeOrigin + performance.now());
+      const playing = queue.play();
+      await vi.waitFor(() => expect(player.playBlob).toHaveBeenCalled());
+      expect(log).not.toHaveBeenCalled();
+      started();
+      await playing;
+      expect(log).toHaveBeenCalledExactlyOnceWith('[Explain Aloud timing]', {
+        phase: 'click-to-first-audio (play promise resolved)', durationMs: expect.any(Number),
+      });
+      await queue.skip();
+      expect(log).toHaveBeenCalledTimes(1);
+    } finally {
+      queue.cancel();
+      log.mockRestore();
+    }
+  });
+
   it('pauses and resumes playback', async () => {
     const mockPlayer = new MockAudioPlayer();
     const mockSynthesizer = vi.fn().mockResolvedValue(new Blob(['fake audio']));

@@ -3,6 +3,7 @@ import type { NarrationSegment } from '@/src/types/narration';
 import { generateWithGemma } from '@/src/services/ollama';
 import { extractTableFacts, generateDeterministicTableSummary, generateSmallTableSummary } from '@/src/table/tableEngine';
 import { formatLiteralCode } from '@/src/narrator/ruleNarrator';
+import { measureAsync } from '@/src/services/timing';
 
 export type NarrationMode = 'natural' | 'literal';
 
@@ -121,7 +122,7 @@ export async function narrateCodeBlock(
   const prompt = buildCodePrompt(code, language, mode);
 
   try {
-    const rawResponse = await generateWithGemma(prompt, model);
+    const rawResponse = await measureAsync('Gemma generation (code)', () => generateWithGemma(prompt, model));
     const parsed = extractJsonFromLlm(rawResponse);
     const validatedSegments = validateLlmSegments(parsed);
 
@@ -230,7 +231,7 @@ export async function narrateTableBlock(
   const prompt = buildTablePrompt(facts);
 
   try {
-    const rawResponse = await generateWithGemma(prompt, model);
+    const rawResponse = await measureAsync('Gemma generation (table)', () => generateWithGemma(prompt, model));
     const parsed = extractJsonFromLlm(rawResponse);
     const validatedSegments = validateLlmSegments(parsed);
 

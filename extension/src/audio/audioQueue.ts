@@ -85,6 +85,7 @@ export class AudioQueue {
   private player: AudioPlayerAdapter;
   private synthesizer: SynthesizerFn;
   private options: AudioQueueOptions;
+  private clickedAt: number | undefined;
 
   // Race-prevention tokens
   private playbackSessionId = 0;
@@ -117,7 +118,8 @@ export class AudioQueue {
     return this.segments;
   }
 
-  public loadPlan(plan: NarrationPlan): void {
+  public loadPlan(plan: NarrationPlan, clickedAt?: number): void {
+    this.clickedAt = clickedAt;
     this.clearInterSegmentTimer();
     this.playbackSessionId++;
     this.activeSegmentToken++;
@@ -192,6 +194,7 @@ export class AudioQueue {
   }
 
   public cancel(): void {
+    this.clickedAt = undefined;
     this.clearInterSegmentTimer();
     this.playbackSessionId++;
     this.activeSegmentToken++;
@@ -268,6 +271,14 @@ export class AudioQueue {
       }
 
       await this.player.playBlob(audioBlob);
+      if (this.playbackSessionId === sessionId && this.activeSegmentToken === segmentToken &&
+          typeof this.clickedAt === 'number' && Number.isFinite(this.clickedAt)) {
+        console.info('[Explain Aloud timing]', {
+          phase: 'click-to-first-audio (play promise resolved)',
+          durationMs: Number((performance.timeOrigin + performance.now() - this.clickedAt).toFixed(2)),
+        });
+        this.clickedAt = undefined;
+      }
     } catch (err: any) {
       if (this.playbackSessionId !== sessionId || this.activeSegmentToken !== segmentToken) {
         return;

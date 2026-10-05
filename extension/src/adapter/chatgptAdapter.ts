@@ -1,5 +1,6 @@
 import type { ResponseIR } from '@/src/types/ir';
 import { parseResponseElement } from '@/src/parser/htmlParser';
+import { measureSync } from '@/src/services/timing';
 
 export const CHATGPT_ASSISTANT_SELECTOR = [
   '[data-message-author-role="assistant"]',
@@ -100,7 +101,7 @@ export function extractResponseIRFromElement(
 ): ResponseIR {
   const contentEl = extractResponseContentElement(responseEl);
   const id = responseId || responseEl.getAttribute('data-message-id') || `chatgpt-${Date.now()}`;
-  return parseResponseElement(contentEl, id);
+  return measureSync('extraction', () => parseResponseElement(contentEl, id));
 }
 
 /**

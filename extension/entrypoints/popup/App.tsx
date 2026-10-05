@@ -26,7 +26,7 @@ export default function App() {
   const audioQueueRef = useRef<AudioQueue | null>(null);
   const activeIRRef = useRef<ResponseIR | null>(null);
 
-  const runPipelineOnIR = async (ir: ResponseIR, targetMode: NarrationMode) => {
+  const runPipelineOnIR = async (ir: ResponseIR, targetMode: NarrationMode, clickedAt?: number) => {
     setLoading(true);
     setErrorMessage(null);
     audioQueueRef.current?.cancel();
@@ -38,7 +38,7 @@ export default function App() {
       });
 
       setPipelineResult(result);
-      audioQueueRef.current?.loadPlan(result.plan);
+      audioQueueRef.current?.loadPlan(result.plan, clickedAt);
       setCurrentSegmentIndex(0);
       setCurrentSegment(result.plan.segments[0] || null);
 
@@ -101,7 +101,7 @@ export default function App() {
       .then((res: any) => {
         if (res?.ir) {
           activeIRRef.current = res.ir;
-          runPipelineOnIR(res.ir, mode);
+          runPipelineOnIR(res.ir, mode, res.clickedAt);
         }
       })
       .catch(() => {});
@@ -110,7 +110,7 @@ export default function App() {
     const handleMessage = (msg: any) => {
       if ((msg?.type === 'EXPLAIN_ALOUD_EXTRACTED' || msg?.type === 'EXPLAIN_ALOUD_SESSION_UPDATED') && msg.ir) {
         activeIRRef.current = msg.ir;
-        runPipelineOnIR(msg.ir, mode);
+        runPipelineOnIR(msg.ir, mode, msg.clickedAt);
       }
     };
 

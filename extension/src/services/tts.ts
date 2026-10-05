@@ -1,4 +1,5 @@
 import { KokoroTTS, env } from 'kokoro-js';
+import { measureAsync, reportTiming } from '@/src/services/timing';
 import ortModuleUrl from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs?url';
 import ortWasmUrl from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm?url';
 
@@ -10,7 +11,9 @@ let ttsInitPromise: Promise<KokoroTTS> | null = null;
  * Thread-safe single-flight promise lock prevents duplicate concurrent model downloads / initialization.
  */
 export async function getKokoroInstance(): Promise<KokoroTTS> {
+  const started = performance.now();
   if (ttsInstance) {
+    reportTiming('Kokoro initialization (reuse)', started);
     return ttsInstance;
   }
 
@@ -21,13 +24,13 @@ export async function getKokoroInstance(): Promise<KokoroTTS> {
       mjs: new URL(ortModuleUrl, globalThis.location.href).href,
       wasm: new URL(ortWasmUrl, globalThis.location.href).href,
     };
-    ttsInitPromise = KokoroTTS.from_pretrained(
+    ttsInitPromise = measureAsync('Kokoro initialization (cold)', () => KokoroTTS.from_pretrained(
       'onnx-community/Kokoro-82M-v1.0-ONNX',
       {
         dtype: 'q8',
         device: 'wasm',
       }
-    )
+    ))
       .then((instance) => {
         ttsInstance = instance;
         return instance;
@@ -47,6 +50,6 @@ export async function synthesizeSpeech(
   voice: 'af_heart' = 'af_heart'
 ): Promise<Blob> {
   const tts = await getKokoroInstance();
-  const rawAudio = await tts.generate(text, { voice });
+  const rawAudio = await measureAsync('Kokoro synthesis (per segment)', () => tts.generate(text, { voice }));
   return rawAudio.toBlob();
 }
