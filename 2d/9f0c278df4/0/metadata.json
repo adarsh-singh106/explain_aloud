@@ -1,0 +1,49 @@
+{
+  "cli_version": "0.11.3",
+  "checkpoint_id": "2d9f0c278df4",
+  "session_id": "01a10a48-a2cd-7dd0-9004-4c2388be198c",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-05T04:22:23.1645396Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "docs/ENTIRE_INTEGRATION.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-reserve",
+  "turn_id": "fc261c712875",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 15303,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 41216,
+    "output_tokens": 877,
+    "api_call_count": 3,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-05T04:22:23.1450565Z",
+    "agent_lines": 17,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 17,
+    "total_lines_changed": 17,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

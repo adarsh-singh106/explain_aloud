@@ -1,0 +1,24 @@
+Make one small documentation-only update to docs/ENTIRE_INTEGRATION.md.
+
+Add a section titled:
+
+## Final CI Review Evidence
+
+Include ONLY these verified facts:
+
+- GitHub Actions CI completed successfully.
+- 191 tests passed across 14 test files.
+- TypeScript compilation passed.
+- Production Chrome extension build passed.
+- Codex independently reviewed the CI workflow.
+- The review found no shipping blockers.
+- The only non-blocking recommendation was:
+  permissions:
+    contents: read
+- That least-privilege hardening was subsequently applied.
+
+Do not modify application code.
+Do not modify the CI workflow.
+Do not exaggerate Entire's capabilities or claim that previous sessions were checkpointed.
+
+Show the exact diff and STOP.
