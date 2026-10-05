@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1140" viewBox="0 0 1200 1140">
+<rect width="100%" height="100%" fill="#F6F9FA"/>
+<text x="60" y="70" font-family="Segoe UI, sans-serif" font-size="38" font-weight="700" fill="#172B38">From selected response to speech</text>
+<text x="60" y="111" font-family="Segoe UI, sans-serif" font-size="24" font-weight="400" fill="#516573">Explain Aloud · implementation diagram</text>
+<rect x="300" y="142" width="600" height="90" rx="16" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="322" y="182" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">Completed ChatGPT response</text>
+<text x="322" y="214" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">DOM content selected through Explain Aloud</text>
+<polyline points="600,232 600,260" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="600,260 593,248 607,248" fill="#087F8C"/>
+<rect x="300" y="260" width="600" height="90" rx="16" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="322" y="300" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">Semantic extraction → ResponseIR</text>
+<text x="322" y="332" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">Headings · prose · lists · code · tables</text>
+<polyline points="600,350 600,378" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="600,378 593,366 607,366" fill="#087F8C"/>
+<rect x="300" y="378" width="600" height="90" rx="16" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="322" y="418" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">Deterministic table facts</text>
+<text x="322" y="450" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">Source values, row bindings, compatible comparisons</text>
+<polyline points="600,468 600,487 300,487 300,515" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="300,515 293,503 307,503" fill="#087F8C"/>
+<polyline points="600,468 600,487 900,487 900,515" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="900,515 893,503 907,503" fill="#087F8C"/>
+<rect x="60" y="515" width="480" height="90" rx="16" fill="#EAF6F3" stroke="#D2DFE4" stroke-width="2"/>
+<text x="82" y="555" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">Rules / Literal</text>
+<text x="82" y="587" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">Simple blocks, small tables, Literal mode</text>
+<rect x="660" y="515" width="480" height="90" rx="16" fill="#ECF2FC" stroke="#D2DFE4" stroke-width="2"/>
+<text x="682" y="555" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">Gemma via local Ollama</text>
+<text x="682" y="587" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">Natural code / other tables; candidate wording</text>
+<polyline points="300,605 300,628 600,628 600,655" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="600,655 593,643 607,643" fill="#087F8C"/>
+<polyline points="900,605 900,628 600,628 600,655" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="600,655 593,643 607,643" fill="#087F8C"/>
+<rect x="300" y="655" width="600" height="90" rx="16" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="322" y="695" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">Validation + safe fallback</text>
+<text x="322" y="727" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">Accepted candidates or source-derived fallback</text>
+<polyline points="600,745 600,773" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="600,773 593,761 607,761" fill="#087F8C"/>
+<rect x="300" y="773" width="600" height="90" rx="16" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="322" y="813" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">NarrationPlan → segment audio queue</text>
+<text x="322" y="845" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">Queue requests Kokoro speech and manages playback</text>
+<polyline points="600,863 600,891" fill="none" stroke="#087F8C" stroke-width="4"/>
+<polygon points="600,891 593,879 607,879" fill="#087F8C"/>
+<rect x="300" y="891" width="600" height="90" rx="16" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="322" y="931" font-family="Segoe UI, sans-serif" font-size="28" font-weight="700" fill="#172B38">Kokoro.js → browser audio</text>
+<text x="322" y="963" font-family="Segoe UI, sans-serif" font-size="21" font-weight="400" fill="#516573">Local WASM synthesis; one configured voice</text>
+<text x="130" y="1041" font-family="Segoe UI, sans-serif" font-size="26" font-weight="700" fill="#172B38">The Chrome side panel hosts the plan, inspector, and playback controls.</text>
+<text x="130" y="1084" font-family="Segoe UI, sans-serif" font-size="24" font-weight="400" fill="#516573">Validation is a guardrail, not a proof of semantic correctness.</text>
+</svg>

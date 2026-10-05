@@ -1,0 +1,14 @@
+flowchart TD
+  DOM[Completed ChatGPT response DOM] --> Extract[Semantic extraction]
+  Extract --> IR[ResponseIR]
+  IR --> Facts[Deterministic table facts]
+  Facts --> Rules[Rules / Literal]
+  Facts --> Gemma[Optional Gemma via local Ollama]
+  Rules --> Validate[Validation + source-derived fallback]
+  Gemma --> Validate
+  Validate --> Plan[NarrationPlan]
+  Plan --> Queue[Segment audio queue]
+  Queue --> Kokoro[Kokoro.js local WASM synthesis]
+  Kokoro --> Audio[Browser audio playback]
+  Panel[Chrome side panel: inspector + controls] -. hosts / controls .-> Plan
+  Panel -. controls .-> Queue

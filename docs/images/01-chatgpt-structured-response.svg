@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="100%" height="100%" style="background:#0d1117; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="card-shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <linearGradient id="btn-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1f6feb"/>
+      <stop offset="100%" stop-color="#238636"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App Window Frame -->
+  <rect x="20" y="20" width="920" height="580" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5" filter="url(#card-shadow)"/>
+  
+  <!-- Window Header Bar -->
+  <path d="M 20 30 Q 20 20 30 20 L 930 20 Q 940 20 940 30 L 940 56 L 20 56 Z" fill="#0d1117"/>
+  <circle cx="44" cy="38" r="6" fill="#f85149"/>
+  <circle cx="64" cy="38" r="6" fill="#d29922"/>
+  <circle cx="84" cy="38" r="6" fill="#238636"/>
+  <text x="480" y="42" fill="#8b949e" font-size="12" font-weight="500" text-anchor="middle">ChatGPT — Structure-Rich Technical Response</text>
+  <line x1="20" y1="56" x2="940" y2="56" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Left Sidebar (Collapsible representation) -->
+  <rect x="20" y="56" width="60" height="544" fill="#0d1117"/>
+  <line x1="80" y1="56" x2="80" y2="600" stroke="#21262d" stroke-width="1"/>
+  <!-- Sidebar icons -->
+  <rect x="38" y="76" width="24" height="24" rx="4" fill="#21262d"/>
+  <circle cx="50" cy="88" r="5" fill="#58a6ff"/>
+  <rect x="38" y="116" width="24" height="24" rx="4" fill="#161b22"/>
+  <rect x="42" y="126" width="16" height="4" rx="2" fill="#484f58"/>
+
+  <!-- Main Chat Content Area -->
+  <g transform="translate(110, 75)">
+    <!-- User Prompt Bubble -->
+    <rect x="520" y="0" width="280" height="38" rx="8" fill="#21262d"/>
+    <text x="535" y="24" fill="#e6edf3" font-size="13">Compare accuracy vs latency for 3 models</text>
+
+    <!-- Assistant Response Card -->
+    <g transform="translate(0, 52)">
+      <!-- Assistant Avatar -->
+      <circle cx="16" cy="16" r="14" fill="#10a37f"/>
+      <path d="M11 16 L14 13 L21 13 L21 19 L14 19 Z" fill="#ffffff" opacity="0.9"/>
+      <text x="40" y="20" fill="#e6edf3" font-size="15" font-weight="600">ChatGPT</text>
+
+      <!-- Heading -->
+      <text x="40" y="48" fill="#58a6ff" font-size="17" font-weight="700">Choosing a model</text>
+      
+      <!-- Prose Paragraph -->
+      <text x="40" y="70" fill="#c9d1d9" font-size="13" line-height="18">
+        Suppose we need to choose between accuracy and latency for a small production API:
+      </text>
+
+      <!-- List Items -->
+      <circle cx="48" cy="94" r="2.5" fill="#8b949e"/>
+      <text x="58" y="98" fill="#c9d1d9" font-size="12.5">Accuracy matters for final predictions.</text>
+
+      <circle cx="48" cy="114" r="2.5" fill="#8b949e"/>
+      <text x="58" y="118" fill="#c9d1d9" font-size="12.5">Latency matters for interactive user experience.</text>
+
+      <circle cx="48" cy="134" r="2.5" fill="#8b949e"/>
+      <text x="58" y="138" fill="#c9d1d9" font-size="12.5">The best choice depends on the specific product constraint.</text>
+
+      <!-- Code Block Container -->
+      <g transform="translate(40, 154)">
+        <rect x="0" y="0" width="600" height="82" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+        <rect x="0" y="0" width="600" height="26" rx="6" fill="#161b22"/>
+        <text x="12" y="17" fill="#8b949e" font-size="11" font-weight="600">python</text>
+        <text x="540" y="17" fill="#8b949e" font-size="11">Copy code</text>
+        
+        <text x="14" y="44" fill="#ff7b72" font-family="Consolas, Monaco, monospace" font-size="12">for <tspan fill="#c9d1d9">user</tspan> <tspan fill="#ff7b72">in</tspan> <tspan fill="#c9d1d9">users:</tspan></text>
+        <text x="14" y="60" fill="#ff7b72" font-family="Consolas, Monaco, monospace" font-size="12">    if <tspan fill="#c9d1d9">user.active:</tspan></text>
+        <text x="14" y="76" fill="#d2a8ff" font-family="Consolas, Monaco, monospace" font-size="12">        send_email<tspan fill="#c9d1d9">(user)</tspan></text>
+      </g>
+
+      <!-- Comparison Table Container -->
+      <g transform="translate(40, 248)">
+        <rect x="0" y="0" width="600" height="106" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+        <!-- Table Header -->
+        <rect x="0" y="0" width="600" height="26" rx="6" fill="#161b22"/>
+        <text x="20" y="18" fill="#f0f6fc" font-size="12" font-weight="600">Model</text>
+        <text x="220" y="18" fill="#f0f6fc" font-size="12" font-weight="600">Accuracy</text>
+        <text x="420" y="18" fill="#f0f6fc" font-size="12" font-weight="600">Latency</text>
+        <line x1="0" y1="26" x2="600" y2="26" stroke="#30363d" stroke-width="1"/>
+
+        <!-- Row 1 -->
+        <text x="20" y="46" fill="#c9d1d9" font-size="12">Model A</text>
+        <text x="220" y="46" fill="#7ee787" font-size="12" font-weight="600">92%</text>
+        <text x="420" y="46" fill="#ffa657" font-size="12">4 sec</text>
+        <line x1="0" y1="53" x2="600" y2="53" stroke="#21262d" stroke-width="1"/>
+
+        <!-- Row 2 -->
+        <text x="20" y="72" fill="#c9d1d9" font-size="12">Model B</text>
+        <text x="220" y="72" fill="#ffa657" font-size="12">88%</text>
+        <text x="420" y="72" fill="#7ee787" font-size="12" font-weight="600">1 sec</text>
+        <line x1="0" y1="79" x2="600" y2="79" stroke="#21262d" stroke-width="1"/>
+
+        <!-- Row 3 -->
+        <text x="20" y="98" fill="#c9d1d9" font-size="12">Model C</text>
+        <text x="220" y="98" fill="#c9d1d9" font-size="12">90%</text>
+        <text x="420" y="98" fill="#c9d1d9" font-size="12">2 sec</text>
+      </g>
+
+      <!-- Injected Explain Aloud Button in Turn Footer -->
+      <g transform="translate(40, 368)">
+        <!-- Standard ChatGPT action icons -->
+        <rect x="0" y="4" width="18" height="18" rx="3" fill="#21262d"/>
+        <rect x="28" y="4" width="18" height="18" rx="3" fill="#21262d"/>
+        <rect x="56" y="4" width="18" height="18" rx="3" fill="#21262d"/>
+
+        <!-- INJECTED BUTTON -->
+        <g transform="translate(94, 0)">
+          <rect x="0" y="0" width="168" height="28" rx="14" fill="#1f6feb" stroke="#58a6ff" stroke-width="1.2"/>
+          <!-- Sound wave icon -->
+          <path d="M14 9 L18 6 L22 6 L26 9 L26 19 L22 22 L18 22 L14 19 Z" fill="#ffffff" transform="scale(0.7) translate(4, 2)"/>
+          <path d="M22 10 Q25 14 22 18" stroke="#ffffff" stroke-width="1.5" fill="none"/>
+          <path d="M25 8 Q29 14 25 20" stroke="#ffffff" stroke-width="1.5" fill="none"/>
+          <text x="36" y="18" fill="#ffffff" font-size="12" font-weight="600">Explain Aloud</text>
+          
+          <!-- Badge pointing arrow / annotation -->
+          <g transform="translate(180, -4)">
+            <rect x="0" y="0" width="186" height="34" rx="6" fill="#238636" stroke="#2ea043" stroke-width="1"/>
+            <text x="10" y="14" fill="#ffffff" font-size="10" font-weight="700">INJECTED ACTION BUTTON</text>
+            <text x="10" y="27" fill="#dafbe1" font-size="10">Triggers Side Panel on Turn</text>
+            <polygon points="-6,17 0,13 0,21" fill="#238636"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,37 @@
+[
+  {
+    "file": "01-chatgpt-table-button.png",
+    "sha256": "d8dacfca4fb278403a6f8d8ada7e9c5f807426dd87497bca50b8354de564b671",
+    "bytes": 18988
+  },
+  {
+    "file": "02-natural-mode-panel.png",
+    "sha256": "bc086d64d7b7cabc4edb8722138e2caefd88616e529e28e6e0134aad9dc3b9da",
+    "bytes": 41040
+  },
+  {
+    "file": "03-architecture.mmd",
+    "sha256": "7ce818064c679289a55b1b64b4da381d967d01c490565f3ff7145263d633888b",
+    "bytes": 596
+  },
+  {
+    "file": "03-architecture.png",
+    "sha256": "bc0d1e7c62c5ee784e069ac2a35984fb9f5a740e83be6589357bbbe50f8dc104",
+    "bytes": 97272
+  },
+  {
+    "file": "03-architecture.svg",
+    "sha256": "93342883a76fd8f88cde073112c0298668d307660ac80bce64b5138a587f09f7",
+    "bytes": 5256
+  },
+  {
+    "file": "04-table-before-after.png",
+    "sha256": "9b4056418d561fb722f899fded9c5ed17dcab282af51f414ff1feff5f0f4af8d",
+    "bytes": 65159
+  },
+  {
+    "file": "04-table-before-after.svg",
+    "sha256": "3e92e5e4f73d0a0fbaf788b6349cddbc3b20bf1c317b42441da795ad4223b648",
+    "bytes": 3480
+  }
+]

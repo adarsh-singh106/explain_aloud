@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 450" width="100%" height="100%" style="background:#0d1117; font-family:Consolas, Monaco, 'Courier New', monospace;">
+  <defs>
+    <filter id="term-shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Terminal Window Frame -->
+  <rect x="20" y="20" width="800" height="410" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1.5" filter="url(#term-shadow)"/>
+
+  <!-- Terminal Window Header -->
+  <path d="M 20 30 Q 20 20 30 20 L 810 20 Q 820 20 820 30 L 820 54 L 20 54 Z" fill="#0d1117"/>
+  <circle cx="44" cy="37" r="6" fill="#f85149"/>
+  <circle cx="64" cy="37" r="6" fill="#d29922"/>
+  <circle cx="84" cy="37" r="6" fill="#238636"/>
+  <text x="420" y="41" fill="#8b949e" font-size="12" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" text-anchor="middle">bash — explain-aloud/extension — Automated Verification</text>
+  <line x1="20" y1="54" x2="820" y2="54" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Terminal Body Content -->
+  <g transform="translate(42, 80)">
+    <!-- Command 1: npm test -->
+    <text x="0" y="0" font-size="13">
+      <tspan fill="#7ee787">➜</tspan> <tspan fill="#58a6ff">explain-aloud/extension</tspan> <tspan fill="#c9d1d9">git:(main) npm test</tspan>
+    </text>
+
+    <text x="0" y="24" fill="#8b949e" font-size="12">> explain-aloud@0.0.0 test</text>
+    <text x="0" y="42" fill="#8b949e" font-size="12">> vitest run</text>
+
+    <!-- Test execution highlights -->
+    <text x="0" y="72" font-size="12.5">
+      <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">src/parser/htmlParser.test.ts</tspan> <tspan fill="#8b949e">(18 tests)</tspan>
+    </text>
+    <text x="0" y="92" font-size="12.5">
+      <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">src/table/tableEngine.test.ts</tspan> <tspan fill="#8b949e">(24 tests)</tspan>
+    </text>
+    <text x="0" y="112" font-size="12.5">
+      <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">src/validator/segmentValidator.test.ts</tspan> <tspan fill="#8b949e">(28 tests)</tspan>
+    </text>
+    <text x="0" y="132" font-size="12.5">
+      <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">src/audio/audioQueue.test.ts</tspan> <tspan fill="#8b949e">(9 tests)</tspan>
+    </text>
+    <text x="0" y="152" font-size="12.5">
+      <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">src/pipeline/package12.test.ts</tspan> <tspan fill="#8b949e">(62 tests)</tspan>
+    </text>
+    <text x="0" y="172" font-size="12.5">
+      <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">src/kokoro.test.ts</tspan> <tspan fill="#8b949e">(2 tests)</tspan>
+    </text>
+
+    <!-- Vitest Summary Box -->
+    <g transform="translate(0, 192)">
+      <rect x="0" y="0" width="380" height="42" rx="4" fill="#1c2128" stroke="#238636" stroke-width="1"/>
+      <text x="14" y="26" font-size="14" font-weight="700">
+        <tspan fill="#8b949e">Test Files </tspan> <tspan fill="#7ee787">14 passed</tspan> <tspan fill="#8b949e">(14)</tspan>
+      </text>
+      <text x="210" y="26" font-size="14" font-weight="700">
+        <tspan fill="#8b949e">Tests </tspan> <tspan fill="#7ee787">191 passed</tspan> <tspan fill="#8b949e">(191)</tspan>
+      </text>
+    </g>
+
+    <!-- Command 2: npm run compile -->
+    <g transform="translate(0, 252)">
+      <text x="0" y="0" font-size="13">
+        <tspan fill="#7ee787">➜</tspan> <tspan fill="#58a6ff">explain-aloud/extension</tspan> <tspan fill="#c9d1d9">git:(main) npm run compile</tspan>
+      </text>
+      <text x="0" y="22" font-size="12.5">
+        <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">tsc --noEmit exited 0 (0 errors, strict mode enabled)</tspan>
+      </text>
+    </g>
+
+    <!-- Command 3: npm run build -->
+    <g transform="translate(0, 296)">
+      <text x="0" y="0" font-size="13">
+        <tspan fill="#7ee787">➜</tspan> <tspan fill="#58a6ff">explain-aloud/extension</tspan> <tspan fill="#c9d1d9">git:(main) npm run build</tspan>
+      </text>
+      <text x="0" y="22" font-size="12.5">
+        <tspan fill="#7ee787">✓</tspan> <tspan fill="#c9d1d9">Built extension in 1.48s → </tspan><tspan fill="#58a6ff">.output/chrome-mv3</tspan> <tspan fill="#8b949e">(24.11 MB, manifest v3)</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

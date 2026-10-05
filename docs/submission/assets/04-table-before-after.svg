@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="830" viewBox="0 0 1200 830">
+<rect width="100%" height="100%" fill="#F6F9FA"/>
+<text x="60" y="66" font-family="Segoe UI, sans-serif" font-size="36" font-weight="700" fill="#172B38">Same cells. A row-by-row listening order.</text>
+<text x="60" y="106" font-family="Segoe UI, sans-serif" font-size="24" font-weight="400" fill="#516573">Automated fixture evidence · not an application screenshot</text>
+<text x="60" y="167" font-family="Segoe UI, sans-serif" font-size="22" font-weight="700" fill="#087F8C">SCREEN INPUT</text>
+<rect x="60" y="190" width="1080" height="59" rx="0" fill="#EAF6F3" stroke="#D2DFE4" stroke-width="2"/>
+<text x="90" y="229" font-family="Segoe UI, sans-serif" font-size="27" font-weight="700" fill="#172B38">Name</text>
+<text x="390" y="229" font-family="Segoe UI, sans-serif" font-size="27" font-weight="700" fill="#172B38">Age</text>
+<text x="660" y="229" font-family="Segoe UI, sans-serif" font-size="27" font-weight="700" fill="#172B38">Role</text>
+<rect x="60" y="249" width="1080" height="59" rx="0" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="90" y="288" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">Alex</text>
+<text x="390" y="288" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">20</text>
+<text x="660" y="288" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">Student</text>
+<rect x="60" y="308" width="1080" height="59" rx="0" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="90" y="347" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">Sam</text>
+<text x="390" y="347" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">21</text>
+<text x="660" y="347" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">Developer</text>
+<rect x="60" y="367" width="1080" height="59" rx="0" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="90" y="406" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">John</text>
+<text x="390" y="406" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">22</text>
+<text x="660" y="406" font-family="Segoe UI, sans-serif" font-size="27" font-weight="400" fill="#172B38">Engineer</text>
+<text x="60" y="487" font-family="Segoe UI, sans-serif" font-size="22" font-weight="700" fill="#087F8C">NATURAL NARRATION · EXACT TESTED TEXT</text>
+<rect x="60" y="505" width="1080" height="240" rx="16" fill="white" stroke="#D2DFE4" stroke-width="2"/>
+<text x="85" y="557" font-family="Segoe UI, sans-serif" font-size="28" font-weight="400" fill="#172B38">The table has three entries.</text>
+<text x="85" y="603" font-family="Segoe UI, sans-serif" font-size="28" font-weight="400" fill="#172B38">Name: Alex, Age: 20, and Role: Student.</text>
+<text x="85" y="649" font-family="Segoe UI, sans-serif" font-size="28" font-weight="400" fill="#172B38">Name: Sam, Age: 21, and Role: Developer.</text>
+<text x="85" y="695" font-family="Segoe UI, sans-serif" font-size="28" font-weight="400" fill="#172B38">Name: John, Age: 22, and Role: Engineer.</text>
+<text x="60" y="797" font-family="Segoe UI, sans-serif" font-size="22" font-weight="400" fill="#516573">All nine data cells retained · no Gemma call · no validation fallback in this test</text>
+</svg>

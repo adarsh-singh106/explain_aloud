@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 540" width="100%" height="100%" style="background:#0d1117; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#58a6ff"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#3fb950"/>
+    </marker>
+    <filter id="node-shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Title & Subtitle -->
+  <text x="440" y="32" fill="#f0f6fc" font-size="19" font-weight="700" text-anchor="middle">Explain Aloud — Core System Architecture</text>
+  <text x="440" y="52" fill="#8b949e" font-size="12" text-anchor="middle">100% Local-First • Zero Cloud Telemetry • Truth First Pipeline</text>
+
+  <!-- Node 1: ChatGPT DOM -->
+  <g transform="translate(340, 70)" filter="url(#node-shadow)">
+    <rect x="0" y="0" width="200" height="38" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.2"/>
+    <text x="100" y="24" fill="#58a6ff" font-size="13" font-weight="600" text-anchor="middle">ChatGPT DOM</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="440" y1="108" x2="440" y2="128" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node 2: Semantic Extraction -->
+  <g transform="translate(320, 128)" filter="url(#node-shadow)">
+    <rect x="0" y="0" width="240" height="38" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.2"/>
+    <text x="120" y="24" fill="#c9d1d9" font-size="13" font-weight="600" text-anchor="middle">Semantic DOM Extraction</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="440" y1="166" x2="440" y2="186" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node 3: ResponseIR -->
+  <g transform="translate(340, 186)" filter="url(#node-shadow)">
+    <rect x="0" y="0" width="200" height="38" rx="6" fill="#1f242c" stroke="#58a6ff" stroke-width="1.5"/>
+    <text x="100" y="24" fill="#f0f6fc" font-size="13" font-weight="700" text-anchor="middle">ResponseIR (Typed Blocks)</text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <line x1="440" y1="224" x2="440" y2="244" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Node 4: Deterministic Facts -->
+  <g transform="translate(300, 244)" filter="url(#node-shadow)">
+    <rect x="0" y="0" width="280" height="38" rx="6" fill="#161b22" stroke="#238636" stroke-width="1.2"/>
+    <text x="140" y="24" fill="#7ee787" font-size="13" font-weight="600" text-anchor="middle">Deterministic Facts &amp; Extrema Engine</text>
+  </g>
+
+  <!-- Split Arrow to Dual Narrators -->
+  <path d="M 440 282 L 440 296 L 240 296 L 240 310" stroke="#58a6ff" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 440 282 L 440 296 L 640 296 L 640 310" stroke="#58a6ff" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Dual Narrators Layer -->
+  <!-- Left: Rule Narrator -->
+  <g transform="translate(120, 310)" filter="url(#node-shadow)">
+    <rect x="0" y="0" width="240" height="42" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.2"/>
+    <text x="120" y="20" fill="#f0f6fc" font-size="12.5" font-weight="600" text-anchor="middle">Deterministic Rule Narrator</text>
+    <text x="120" y="34" fill="#8b949e" font-size="10.5" text-anchor="middle">Headings • Prose • Lists • Literal Mode</text>
+  </g>
+
+  <!-- Right: Gemma 4 via Ollama -->
+  <g transform="translate(520, 310)" filter="url(#node-shadow)">
+    <rect x="0" y="0" width="240" height="42" rx="6" fill="#1c2128" stroke="#1f6feb" stroke-width="1.5"/>
+    <text x="120" y="20" fill="#58a6ff" font-size="12.5" font-weight="700" text-anchor="middle">Local Gemma 4 via Ollama</text>
+    <text x="120" y="34" fill="#8b949e" font-size="10.5" text-anchor="middle">Natural Code &amp; Table Explanations</text>
+  </g>
+
+  <!-- Converge Arrows to Validator -->
+  <path d="M 240 352 L 240 368 L 440 368 L 440 380" stroke="#58a6ff" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 640 352 L 640 368 L 440 368 L 440 380" stroke="#58a6ff" stroke-width="1.8" fill="none"/>
+
+  <!-- Node 6: Validation + Safe Fallback -->
+  <g transform="translate(290, 380)" filter="url(#node-shadow)">
+    <rect x="0" y="0" width="300" height="38" rx="6" fill="#161b22" stroke="#d29922" stroke-width="1.4"/>
+    <text x="150" y="24" fill="#e3b341" font-size="13" font-weight="700" text-anchor="middle">Validation &amp; Safe Fallback Layer</text>
+  </g>
+
+  <!-- Arrow 5 -->
+  <line x1="440" y1="418" x2="440" y2="436" stroke="#3fb950" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <!-- Bottom Row: TTS -> Queue -> UI -->
+  <g transform="translate(80, 436)">
+    <!-- Kokoro TTS -->
+    <g transform="translate(0, 0)" filter="url(#node-shadow)">
+      <rect x="0" y="0" width="210" height="42" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.2"/>
+      <text x="105" y="20" fill="#f0f6fc" font-size="12.5" font-weight="600" text-anchor="middle">Kokoro-82M (WASM)</text>
+      <text x="105" y="34" fill="#8b949e" font-size="10.5" text-anchor="middle">Single-Flight Mutex • Browser TTS</text>
+    </g>
+
+    <!-- Arrow to Queue -->
+    <line x1="210" y1="21" x2="250" y2="21" stroke="#3fb950" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+    <!-- AudioQueue -->
+    <g transform="translate(250, 0)" filter="url(#node-shadow)">
+      <rect x="0" y="0" width="220" height="42" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.2"/>
+      <text x="110" y="20" fill="#f0f6fc" font-size="12.5" font-weight="600" text-anchor="middle">AudioQueue Controller</text>
+      <text x="110" y="34" fill="#8b949e" font-size="10.5" text-anchor="middle">Monotonic Tokens • Race-Free</text>
+    </g>
+
+    <!-- Arrow to Side Panel -->
+    <line x1="470" y1="21" x2="510" y2="21" stroke="#3fb950" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+    <!-- Chrome Side Panel -->
+    <g transform="translate(510, 0)" filter="url(#node-shadow)">
+      <rect x="0" y="0" width="210" height="42" rx="6" fill="#1c2128" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="105" y="20" fill="#7ee787" font-size="12.5" font-weight="700" text-anchor="middle">Chrome MV3 Side Panel</text>
+      <text x="105" y="34" fill="#c9d1d9" font-size="10.5" text-anchor="middle">Live Tracking • Controls</text>
+    </g>
+  </g>
+
+  <!-- Bottom boundary annotation -->
+  <text x="440" y="515" fill="#484f58" font-size="11" text-anchor="middle">Boundaries: Zero external API calls • Memory cached audio buffers • AbortSignal timeout budgets</text>
+</svg>
