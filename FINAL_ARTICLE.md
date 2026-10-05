@@ -16,21 +16,23 @@ The core question guiding every design decision was: *if the screen disappears, 
 
 ## Demo
 
-https://youtu.be/sPxWW-xJ0Eg
+{% embed https://www.youtube.com/watch?v=sPxWW-xJ0Eg %}
 
 > Demo voiceover generated with ElevenLabs. The Explain Aloud narration heard inside the product is Kokoro.
 
+<!-- DEV EDITOR: Upload submission-assets/01-chatgpt-table-button.png and replace the src below with the DEV-hosted URL before publishing. -->
 ![A real ChatGPT response shows a three-model table and an Explain Aloud action beneath the completed answer.](submission-assets/01-chatgpt-table-button.png)
 
 *The extension attaches to a completed response. These model figures are example response content, not measurements of Explain Aloud.*
 
+<!-- DEV EDITOR: Upload submission-assets/02-natural-mode-panel.png and replace the src below with the DEV-hosted URL before publishing. -->
 ![The real Explain Aloud side panel showing Natural Mode selected, a Gemma 4 E4B Ready badge, playback controls, and rule-generated narration segments linked to source blocks.](submission-assets/02-natural-mode-panel.png)
 
 *Panel captured in stopped state with a rule-generated segment selected. The "Verified" label is the application's own validation result, not an independent semantic proof. The response identifier has been redacted.*
 
 ## Code
 
-https://github.com/adarsh-singh106/explain_aloud
+[adarsh-singh106/explain_aloud](https://github.com/adarsh-singh106/explain_aloud)
 
 ## How I Built It
 
@@ -44,7 +46,7 @@ The extraction is deterministic. No model is involved yet, and no interpretation
 
 In Natural Mode, code and table blocks are handed to a local Gemma call through Ollama. The boundary I wanted was specific: Gemma receives the pre-extracted facts, not the raw HTML. For a table, the deterministic parser has already produced the headers, row entities, numeric values, and unit-normalized metrics before the model sees anything. Gemma's task is to choose phrasing, not to read the table.
 
-The model's output is a candidate narration. Every candidate must then pass through the segment validator before reaching the narration plan. Validation checks entity–metric bindings, code grounding, and causality. If a candidate fails, the system discards it and substitutes a source-derived deterministic fallback. The fallback is always a rule-based transformation of what was already extracted — never an invented summary.
+The model's output is a candidate narration. Candidate narrations pass through conservative block-specific validation before entering the narration plan. Where the validator cannot establish enough support, the system falls back to source-derived deterministic narration. The fallback is always a rule-based transformation of what was already extracted — never an invented summary.
 
 The configured default is `gemma4:e4b`, with `gemma4:e2b` as the model-not-found fallback. Which model actually ran in a given browser session was not separately recorded.
 
@@ -87,6 +89,7 @@ That exact output is what the regression test asserts, character for character. 
 
 Larger or irregular tables stay on the existing path. Merged-cell tables stay on the existing path. The row-wise route applies only where the structure is simple enough to be safe.
 
+<!-- DEV EDITOR: Upload submission-assets/04-table-before-after.png and replace the src below with the DEV-hosted URL before publishing. -->
 ![Automated fixture before and after: Name, Age, Role rows become three spoken row descriptions, preserving each cell.](submission-assets/04-table-before-after.png)
 
 *This is a test-evidence graphic, not a browser screenshot. The narration is copied directly from the passing regression assertion.*
@@ -134,24 +137,20 @@ The narration pipeline uses local Ollama/Gemma and in-browser Kokoro WASM. Compl
 
 ## Why Does Open Innovation Matter?
 
-Explain Aloud exists because local models and open browser APIs make the stack possible without a backend. No transcripts are sent to a cloud service. The narration pipeline runs on the user's machine. Kokoro runs inside the browser as WASM.
+Explain Aloud exists because local models and open browser APIs make the stack possible without a backend. Explain Aloud does not intentionally send extracted response content to an additional cloud backend for narration. Its narration path uses local Ollama/Gemma and in-browser Kokoro. Complete offline operation was not separately verified.
 
-That matters for a use case like this, where the content being narrated is personal conversations. The extension attaches to ChatGPT, which already has its own privacy boundary. Inside the extension's own pipeline, the path stays local. Open models and open runtimes make that design available without infrastructure.
+That matters for a use case like this, where the content being narrated is personal conversations. The extension attaches to ChatGPT, which already has its own privacy boundary. Inside the extension's own narration pipeline, the path stays local. Open models and open runtimes make that design available without infrastructure.
 
 ## My Agent Session
 
-The finalization phase of Explain Aloud — the source-fidelity hardening, the production WASM fix, CI setup, and submission preparation — was developed with Antigravity (AI-assisted coding) and checkpointed using Entire.
+I enabled Entire late in the finalization phase. The permanent checkpoint below captures a Codex documentation session that recorded the final CI review evidence. It does not represent the entire development history of Explain Aloud.
 
-Entire runs alongside git to capture AI-assisted development sessions as shadow branch checkpoints, without polluting the main branch history. The finalization-phase checkpoint is:
-
-- **Checkpoint ID:** `2d9f0c278df4`
-- **Linked commit:** `3aa189b`
-
-These checkpoints cover the finalization work: the segment validator hardening, the row-wise table narration path, the WASM fix, CI configuration, and the Codex review of the CI workflow.
+**Checkpoint:** `2d9f0c278df4`
+**Linked commit:** `3aa189b`
 
 The Codex review found no shipping blockers. Its only recommendation was adding `permissions: contents: read` to the CI workflow for least-privilege hardening. That was applied before submission.
 
-Entire was introduced during the finalization phase. It does not capture earlier development history prior to that setup.
+Earlier implementation work — including the narration hardening and WASM debugging — happened before this permanent Entire checkpoint was created.
 
 ## Prize Categories
 
@@ -165,13 +164,13 @@ This bounded role — where open local inference contributes without being trust
 
 ### Best Use of Entire
 
-Entire provided session provenance during the finalization phase. The checkpoint `2d9f0c278df4`, linked to commit `3aa189b`, captures the AI-assisted development that produced the production-ready build: WASM fix, table narration improvements, validator hardening, CI configuration, and the Codex review.
+Entire provided provenance for the final Codex documentation session. The checkpoint `2d9f0c278df4`, linked to commit `3aa189b`, captures that session — specifically the CI review in which Codex returned `BLOCKERS: None` and `SAFE TO SHIP: YES`, and the `permissions: contents: read` hardening that followed.
 
-When Codex independently reviewed the CI workflow and returned `BLOCKERS: None` and `SAFE TO SHIP: YES`, that review is part of the checkpointed session record — not a separate process. The `permissions: contents: read` hardening that followed is reflected in the current CI file.
+The checkpoint does not claim to cover the broader implementation history. Earlier work — narration hardening, the WASM fix, table narration changes — happened before this Entire checkpoint was created. What it does establish is a traceable record of the final review decision and the CI state at the time of submission.
 
 ### Best Use of GitHub Copilot
 
-The GitHub Actions CI workflow was configured and hardened as part of this project. The workflow runs tests, typecheck, and the production build on every push to `main` and pull request, under least-privilege `contents: read` permissions. To the extent that GitHub Actions and Copilot automation share that track, the CI configuration represents that contribution.
+I used GitHub Actions to automate test, typecheck, and production-build verification on pushes and pull requests to `main`, with least-privilege `contents: read` permissions. The workflow runs all three checks in sequence — `npm test`, `npm run compile`, and `npm run build` — and catches regressions before they reach the main branch.
 
 ### Best Use of ElevenLabs
 
