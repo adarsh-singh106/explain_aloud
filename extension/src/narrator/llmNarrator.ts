@@ -1,7 +1,8 @@
 import type { Block, CodeStructured, Fact } from '@/src/types/ir';
 import type { NarrationSegment } from '@/src/types/narration';
 import { generateWithGemma } from '@/src/services/ollama';
-import { extractTableFacts, generateDeterministicTableSummary } from '@/src/table/tableEngine';
+import { extractTableFacts, generateDeterministicTableSummary, generateSmallTableSummary } from '@/src/table/tableEngine';
+import { formatLiteralCode } from '@/src/narrator/ruleNarrator';
 
 export type NarrationMode = 'natural' | 'literal';
 
@@ -136,8 +137,8 @@ export async function narrateCodeBlock(
   } catch (err: any) {
     // Source-derived safe fallback for code: NEVER invent unseen behavior
     const fallbackText = mode === 'literal'
-      ? `Code snippet in ${language}: ${code.replace(/\s+/g, ' ').trim()}`
-      : `Verified explanation is unavailable for this ${language} code block. Code: ${code.replace(/\s+/g, ' ').trim()}`;
+      ? formatLiteralCode(code, language)
+      : `Verified explanation is unavailable for this ${language} code block.\n${formatLiteralCode(code, language)}`;
 
     return [
       {
@@ -164,7 +165,9 @@ export function buildTablePrompt(facts: Fact[]): string {
       if (val.isTie) {
         return `- factId: "${f.id}", Metric: ${val.metric}, All entities tied at: ${val.highest.raw}`;
       }
-      return `- factId: "${f.id}", Metric: ${val.metric}, Highest: ${val.highest.entity} (${val.highest.raw}), Lowest: ${val.lowest.entity} (${val.lowest.raw})`;
+      const highestNames = Array.isArray(val.highest.entities) ? val.highest.entities.join(', ') : val.highest.entity;
+      const lowestNames = Array.isArray(val.lowest.entities) ? val.lowest.entities.join(', ') : val.lowest.entity;
+      return `- factId: "${f.id}", Metric: ${val.metric}, Highest: ${highestNames} (${val.highest.raw}), Lowest: ${lowestNames} (${val.lowest.raw})`;
     }
     if (f.kind === 'number') {
       const val = f.value as any;
@@ -201,6 +204,14 @@ export async function narrateTableBlock(
   model = 'gemma4:e4b'
 ): Promise<NarrationSegment[]> {
   const facts = extractTableFacts(block);
+  const smallTable = generateSmallTableSummary(block);
+  if (smallTable) {
+    return [{
+      id: `seg-${block.id}-rows`, sourceBlockIds: [block.id],
+      factIds: facts.filter(fact => fact.kind !== 'comparison').map(fact => fact.id),
+      provenance: 'rule', text: smallTable, verified: true, pauseAfterMs: 350,
+    }];
+  }
 
   if (facts.length === 0) {
     return [

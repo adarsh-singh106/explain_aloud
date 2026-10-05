@@ -4,6 +4,7 @@ import {
   parseNumericCell,
   extractTableFacts,
   generateDeterministicTableSummary,
+  normalizeUnit,
 } from './tableEngine';
 
 describe('Milestone M3 — Table Engine', () => {
@@ -197,7 +198,7 @@ describe('Milestone M3 — Table Engine', () => {
       expect(scoreComp.isTie).toBe(true);
 
       const summary = generateDeterministicTableSummary(tiedTable);
-      expect(summary).toContain('all candidates are tied at 95%');
+      expect(summary).toContain('all candidates (Candidate Alice and Candidate Bob) are tied at 95%');
     });
 
     it('preserves non-numeric text columns like License', () => {
@@ -222,4 +223,73 @@ describe('Milestone M3 — Table Engine', () => {
       expect((textFacts[1]!.value as any).text).toBe('Apache-2.0');
     });
   });
+
+  describe('R04 & R05 Source-Fidelity Regression Tests', () => {
+    const makeTable = (headers: string[], rows: string[][]): Block => ({
+      id: 'table-test',
+      order: 0,
+      type: 'table',
+      raw: '<table></table>',
+      structured: { headers, rows } as TableStructured,
+    });
+
+    it('R05: normalizes SI kilobytes to 1000 bytes and binary KiB to 1024 bytes', () => {
+      expect(normalizeUnit(1, 'kB').normalizedValue).toBe(1000);
+      expect(normalizeUnit(1, 'KiB').normalizedValue).toBe(1024);
+    });
+
+    it('R05: treats bare "m" as ambiguous and does not compare with seconds', () => {
+      const b = makeTable(['Item', 'Measure'], [['A', '1 m'], ['B', '2 s']]);
+      const compFacts = extractTableFacts(b).filter((f) => f.kind === 'comparison');
+      expect(compFacts).toHaveLength(0);
+    });
+
+    it('R05: does not invent equality for small non-tied values (1e-10 vs 2e-10)', () => {
+      const b = makeTable(['Model', 'Value'], [['A', '0.0000000001'], ['B', '0.0000000002']]);
+      const summary = generateDeterministicTableSummary(b);
+      expect(summary).not.toContain('are tied');
+      expect(summary).toContain('Model B is highest');
+      expect(summary).toContain('Model A is lowest');
+    });
+
+    it('R04: natural summary preserves text-only columns (MIT, Apache)', () => {
+      const b = makeTable(['Library', 'License'], [['LibA', 'MIT'], ['LibB', 'Apache']]);
+      const summary = generateDeterministicTableSummary(b);
+      expect(summary).toContain('MIT');
+      expect(summary).toContain('Apache');
+    });
+
+    it('R04: natural summary preserves single-row tables (92%)', () => {
+      const b = makeTable(['Model', 'Accuracy'], [['A', '92%']]);
+      const summary = generateDeterministicTableSummary(b);
+      expect(summary).toContain('92%');
+    });
+
+    it('R04: natural summary preserves incompatible-unit values ($10, 10 EUR)', () => {
+      const b = makeTable(['Service', 'Cost'], [['A', '$10'], ['B', '10 EUR']]);
+      const summary = generateDeterministicTableSummary(b);
+      expect(summary).toContain('$10');
+      expect(summary).toContain('10 EUR');
+    });
+
+    it('R04: natural summary preserves text columns on extreme rows (MIT, Apache)', () => {
+      const b = makeTable(
+        ['Model', 'Score', 'License'],
+        [['A', '92%', 'MIT'], ['B', '88%', 'Apache']]
+      );
+      const summary = generateDeterministicTableSummary(b);
+      expect(summary).toContain('MIT');
+      expect(summary).toContain('Apache');
+    });
+
+    it('R04: natural summary preserves intermediate cells across metrics (X 2)', () => {
+      const b = makeTable(
+        ['Model', 'X', 'Y'],
+        [['A', '1', '20'], ['B', '2', '10'], ['C', '3', '30']]
+      );
+      const summary = generateDeterministicTableSummary(b);
+      expect(summary).toContain('X 2');
+    });
+  });
 });
+

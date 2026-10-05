@@ -142,6 +142,8 @@ describe('Milestone M4 — LLM Narrator', () => {
           ['A', '92%', '4 sec'],
           ['B', '88%', '1 sec'],
           ['C', '90%', '2 sec'],
+          ['D', '89%', '3 sec'],
+          ['E', '91%', '3 sec'],
         ],
       } as TableStructured,
     };
@@ -175,7 +177,7 @@ describe('Milestone M4 — LLM Narrator', () => {
       expect(segments[0]?.provenance).toBe('rule');
       expect(segments[0]?.fallbackReason).toContain('Model busy');
       expect(segments[0]?.verified).toBe(false);
-      expect(segments[0]?.text).toContain('The table compares 3 models');
+      expect(segments[0]?.text).toContain('The table compares 5 models');
     });
   });
 });

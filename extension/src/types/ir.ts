@@ -15,9 +15,18 @@ export interface ParagraphStructured {
   text: string;
 }
 
+export interface ListItemPart {
+  type: 'text' | 'inline-code' | 'code-block';
+  text?: string;
+  code?: string;
+  language?: string;
+}
+
 export interface ListStructured {
   ordered: boolean;
   items: string[];
+  start?: number;
+  itemParts?: ListItemPart[][];
 }
 
 export interface CodeStructured {

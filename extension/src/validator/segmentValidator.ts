@@ -1,7 +1,7 @@
 import type { Block, Fact, CodeStructured, ListStructured } from '@/src/types/ir';
 import type { NarrationSegment, NarrationPlan } from '@/src/types/narration';
-import { generateDeterministicTableSummary } from '@/src/table/tableEngine';
-import { cleanSpokenText } from '@/src/narrator/ruleNarrator';
+import { generateDeterministicTableSummary, generateLiteralTableSummary } from '@/src/table/tableEngine';
+import { cleanSpokenText, formatLiteralCode } from '@/src/narrator/ruleNarrator';
 
 export interface ValidationResult {
   valid: boolean;
@@ -92,7 +92,8 @@ export function validateSegment(
   segment: NarrationSegment,
   sourceBlock: Block | undefined,
   allFacts: Fact[],
-  allBlocks: Block[] = []
+  allBlocks: Block[] = [],
+  mode: 'natural' | 'literal' = 'natural'
 ): ValidationResult {
   const reasons: string[] = [];
 
@@ -109,7 +110,7 @@ export function validateSegment(
   }
 
   // 2. Unresolved visual phrasing check
-  if (VISUAL_PHRASE_REGEX.test(segment.text)) {
+  if (segment.provenance !== 'literal' && VISUAL_PHRASE_REGEX.test(segment.text)) {
     reasons.push('unresolved_visual_reference');
   }
 
@@ -128,8 +129,8 @@ export function validateSegment(
     }
   }
 
-  // 4. Factual & numeric validation for table blocks
-  if (sourceBlock?.type === 'table') {
+  // 4. Factual & numeric validation for table blocks (natural LLM narration only)
+  if (sourceBlock?.type === 'table' && segment.provenance !== 'literal' && mode !== 'literal') {
     // 4A. Unsupported causality check: tables do not contain causal explanations
     if (CAUSAL_REGEX.test(segment.text)) {
       reasons.push('unsupported_causality');
@@ -307,13 +308,18 @@ export function validateSegment(
     fallbackText = 'Content for this segment is unavailable.';
     fallbackProvenance = 'literal';
   } else if (sourceBlock.type === 'table') {
-    fallbackText = generateDeterministicTableSummary(sourceBlock);
-    fallbackProvenance = 'rule';
+    if (mode === 'literal' || segment.provenance === 'literal') {
+      fallbackText = generateLiteralTableSummary(sourceBlock);
+      fallbackProvenance = 'literal';
+    } else {
+      fallbackText = generateDeterministicTableSummary(sourceBlock);
+      fallbackProvenance = 'rule';
+    }
   } else if (sourceBlock.type === 'code') {
     const structured = sourceBlock.structured as CodeStructured | undefined;
-    const code = (structured?.code || sourceBlock.raw || '').replace(/\s+/g, ' ').trim();
+    const code = structured?.code || sourceBlock.raw || '';
     const language = structured?.language || sourceBlock.language || 'code';
-    fallbackText = `Code snippet in ${language}: ${code}`;
+    fallbackText = formatLiteralCode(code, language);
     fallbackProvenance = 'literal';
   } else if (sourceBlock.type === 'paragraph') {
     const rawNoHtml = sourceBlock.raw.replace(/<[^>]+>/g, '');
@@ -363,7 +369,8 @@ export function validateSegment(
 export function validateNarrationPlan(
   plan: NarrationPlan,
   blocks: Block[],
-  facts: Fact[]
+  facts: Fact[],
+  mode: 'natural' | 'literal' = 'natural'
 ): { plan: NarrationPlan; passedCount: number; fallbackCount: number } {
   const blockMap = new Map<string, Block>(blocks.map((b) => [b.id, b]));
   let passedCount = 0;
@@ -372,7 +379,7 @@ export function validateNarrationPlan(
   const validatedSegments = plan.segments.map((seg) => {
     const primaryBlockId = seg.sourceBlockIds[0];
     const sourceBlock = primaryBlockId ? blockMap.get(primaryBlockId) : undefined;
-    const result = validateSegment(seg, sourceBlock, facts, blocks);
+    const result = validateSegment(seg, sourceBlock, facts, blocks, mode);
 
     if (result.valid) {
       passedCount++;

@@ -1,7 +1,7 @@
 import type { Block, Fact, ResponseIR, CodeStructured } from '@/src/types/ir';
 import type { NarrationPlan, NarrationSegment } from '@/src/types/narration';
 import { parseResponseHtml, parseResponseElement } from '@/src/parser/htmlParser';
-import { narrateBlockWithRules } from '@/src/narrator/ruleNarrator';
+import { narrateBlockWithRules, formatLiteralCode } from '@/src/narrator/ruleNarrator';
 import { narrateCodeBlock, narrateTableBlock, type NarrationMode } from '@/src/narrator/llmNarrator';
 import { extractTableFacts, generateLiteralTableSummary } from '@/src/table/tableEngine';
 import { validateNarrationPlan } from '@/src/validator/segmentValidator';
@@ -66,7 +66,7 @@ export async function buildNarrationPlanFromIR(
           sourceBlockIds: [block.id],
           factIds: [],
           provenance: 'literal',
-          text: `Code snippet in ${language}: ${code.replace(/\s+/g, ' ').trim()}`,
+          text: formatLiteralCode(code, language),
           verified: true,
           pauseAfterMs: 350,
         });
@@ -124,7 +124,8 @@ export async function buildNarrationPlanFromIR(
   const { plan: validatedPlan, passedCount, fallbackCount } = validateNarrationPlan(
     candidatePlan,
     ir.blocks,
-    allFacts
+    allFacts,
+    mode
   );
 
   return {

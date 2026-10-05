@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { executePipelineFromHtml } from './pipeline';
+import { executePipelineFromHtml, buildNarrationPlanFromIR } from './pipeline';
 import * as ollamaService from '@/src/services/ollama';
+import type { Block, ResponseIR, TableStructured, CodeStructured } from '@/src/types/ir';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -101,7 +102,9 @@ describe('Milestone M6 — End-to-End Fixture Pipeline', () => {
       return JSON.stringify({ segments: [{ text: 'Code explanation.' }] });
     });
 
-    const result = await executePipelineFromHtml(fixtureHtml, {
+    // Small tables now use deterministic rows; keep this test on the LLM path.
+    const largerFixture = fixtureHtml.replace('</tbody>', '<tr><td>D</td><td>89%</td><td>3 sec</td></tr><tr><td>E</td><td>91%</td><td>3 sec</td></tr></tbody>');
+    const result = await executePipelineFromHtml(largerFixture, {
       mode: 'natural',
       responseId: 'test-fallback-fixture',
     });
@@ -112,7 +115,7 @@ describe('Milestone M6 — End-to-End Fixture Pipeline', () => {
 
     const tableSeg = result.plan.segments.find((s) => s.sourceBlockIds.includes('block-4'));
     expect(tableSeg?.provenance).toBe('rule');
-    expect(tableSeg?.text).toContain('The table compares 3 models');
+    expect(tableSeg?.text).toContain('The table compares 5 models');
     expect(tableSeg?.fallbackReason).toContain('unsupported_number:99');
     expect(tableSeg?.verified).toBe(false);
   });
@@ -141,5 +144,72 @@ describe('Milestone M6 — End-to-End Fixture Pipeline', () => {
     expect(tableSeg?.text).toContain('Model B: Accuracy: 88%, Latency: 1 sec');
     expect(tableSeg?.text).toContain('Model C: Accuracy: 90%, Latency: 2 sec');
   });
+
+  describe('R06 & R07 Source-Fidelity Pipeline and Literal Mode Regression Tests', () => {
+    it('R06: honors ordered list start value in narration', async () => {
+      const html = '<article><ol start="5"><li>Continue</li></ol></article>';
+      const result = await executePipelineFromHtml(html);
+      expect(result.plan.segments[0]?.text).not.toContain('First');
+      expect(result.plan.segments[0]?.text).toMatch(/^(?:Fifth|Step 5|Item 5)/);
+      expect(result.plan.segments[0]?.text).toContain('Continue');
+    });
+
+    it('R07: literal table preserves digit-bearing string (Apache-2.0) with zero fallbacks', async () => {
+      const tableBlock: Block = {
+        id: 'block-table',
+        order: 0,
+        type: 'table',
+        raw: '<table></table>',
+        structured: {
+          headers: ['Library', 'License'],
+          rows: [
+            ['LibA', 'MIT'],
+            ['LibB', 'Apache-2.0'],
+          ],
+        } as TableStructured,
+      };
+
+      const testIr: ResponseIR = {
+        schemaVersion: '1.0',
+        site: 'chatgpt',
+        responseId: 'test-literal-table',
+        blocks: [tableBlock],
+        facts: [],
+      };
+
+      const result = await buildNarrationPlanFromIR(testIr, { mode: 'literal' });
+      expect(result.validationStats.fallbackCount).toBe(0);
+      expect(result.plan.segments[0]?.text).toContain('Apache-2.0');
+    });
+
+    it('R07: literal code preserves line structure and indentation instead of collapsing', async () => {
+      const codeBlock: Block = {
+        id: 'block-code',
+        order: 0,
+        type: 'code',
+        raw: '<pre><code>if ok:\n    action()\ncleanup()</code></pre>',
+        structured: {
+          language: 'python',
+          code: 'if ok:\n    action()\ncleanup()',
+        } as CodeStructured,
+      };
+
+      const testIr: ResponseIR = {
+        schemaVersion: '1.0',
+        site: 'chatgpt',
+        responseId: 'test-literal-code',
+        blocks: [codeBlock],
+        facts: [],
+      };
+
+      const result = await buildNarrationPlanFromIR(testIr, { mode: 'literal' });
+      const text = result.plan.segments[0]?.text || '';
+      expect(text).not.toContain('if ok: action() cleanup()');
+      expect(text).toContain('action()');
+      expect(text).toContain('cleanup()');
+      expect(text).toMatch(/(?:Line 1|indent|Line 2)/);
+    });
+  });
 });
+
 

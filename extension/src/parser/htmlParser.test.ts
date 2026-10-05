@@ -253,5 +253,52 @@ describe('Milestone M1 — ResponseIR Parser', () => {
       expect(table.headers).toEqual(['A', 'B']);
     });
   });
+
+  describe('R06 Parser Sibling and Structure Regression Tests', () => {
+    it('preserves sibling warning and multiple tables within wrappers', () => {
+      const html =
+        '<article><div><p>Critical warning</p><table><tr><td>A</td><td>2</td></tr></table><table><tr><td>B</td><td>9</td></tr></table></div></article>';
+      const ir = parseResponseHtml(html);
+      expect(ir.blocks).toHaveLength(3);
+      expect(ir.blocks[0]?.type).toBe('paragraph');
+      expect((ir.blocks[0]?.structured as ParagraphStructured).text).toBe('Critical warning');
+      expect(ir.blocks[1]?.type).toBe('table');
+      expect(ir.blocks[2]?.type).toBe('table');
+    });
+
+    it('unwraps nested single-child wrapper into semantic blocks', () => {
+      const html = '<article><div><section><h2>Title</h2><p>Body</p></section></div></article>';
+      const ir = parseResponseHtml(html);
+      expect(ir.blocks).toHaveLength(2);
+      expect(ir.blocks[0]?.type).toBe('heading');
+      expect((ir.blocks[0]?.structured as HeadingStructured).text).toBe('Title');
+      expect(ir.blocks[1]?.type).toBe('paragraph');
+      expect((ir.blocks[1]?.structured as ParagraphStructured).text).toBe('Body');
+    });
+
+    it('preserves boundaries in list items containing nested code and paragraphs', () => {
+      const html =
+        '<article><ul><li>Run this<pre><code>print(42)</code></pre><p>Then stop</p></li></ul></article>';
+      const ir = parseResponseHtml(html);
+      expect(ir.blocks).toHaveLength(1);
+      expect(ir.blocks[0]?.type).toBe('list');
+      const list = ir.blocks[0]?.structured as ListStructured;
+      expect(list.items[0]).not.toBe('Run thisprint(42)Then stop');
+      expect(list.items[0]).toContain('Run this');
+      expect(list.items[0]).toContain('print(42)');
+      expect(list.items[0]).toContain('Then stop');
+    });
+
+    it('extracts start attribute on ordered lists', () => {
+      const html = '<article><ol start="5"><li>Continue</li></ol></article>';
+      const ir = parseResponseHtml(html);
+      expect(ir.blocks).toHaveLength(1);
+      expect(ir.blocks[0]?.type).toBe('list');
+      const list = ir.blocks[0]?.structured as ListStructured;
+      expect(list.ordered).toBe(true);
+      expect((list as any).start).toBe(5);
+    });
+  });
 });
+
 
